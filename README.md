@@ -1,0 +1,326 @@
+# TravelNet Portal
+
+A professional travel router management application for Raspberry Pi that provides a web-based interface for connecting to public WiFi networks, managing system settings, and generating QR codes for easy network sharing.
+
+## Features
+
+- 🌐 **WiFi Management**: Scan and connect to available WiFi networks
+- 📱 **QR Code Generation**: Create QR codes for easy WiFi sharing
+- 🔧 **System Controls**: Reboot system, manage SSH access
+- 📊 **Network Status**: Real-time connection monitoring
+- 🎨 **Modern UI**: Responsive Bootstrap-based interface
+- 🔒 **Security**: Input validation and secure command execution
+- 📝 **Logging**: Comprehensive application logging
+
+## Project Structure
+
+```
+travelnet-portal/
+├── app.py                 # Main Flask application
+├── config.py             # Configuration settings
+├── requirements.txt      # Python dependencies
+├── setup.sh             # Raspberry Pi setup script
+├── templates/           # HTML templates
+│   ├── base.html        # Base template
+│   ├── index.html       # Main dashboard
+│   ├── qr_connect.html  # QR code generation page
+│   └── error.html       # Error page
+├── static/              # Static files (created automatically)
+├── logs/                # Application logs (created automatically)
+└── vpn_configs/         # VPN configuration files (created automatically)
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Raspberry Pi with Raspberry Pi OS
+- Two WiFi interfaces (built-in + USB WiFi adapter) or Ethernet + WiFi
+- SSH access to your Raspberry Pi
+
+### Installation
+
+1. **Clone the repository on your development machine:**
+   ```bash
+   git clone <repository-url>
+   cd travelnet-portal
+   ```
+
+2. **Deploy to Raspberry Pi:**
+   ```bash
+   # Copy files to Pi
+   scp -r . pi@10.10.10.60:/home/pi/travelnet-portal/
+   
+   # SSH into Pi
+   ssh pi@10.10.10.60
+   
+   # Navigate to project directory
+   cd /home/pi/travelnet-portal
+   
+   # Make setup script executable and run it
+   chmod +x setup.sh
+   sudo ./setup.sh
+   ```
+
+3. **Access the portal:**
+   - Connect to the `TravelNet-<hostname>` WiFi network (password: `TravelNet123`)
+   - Open browser and go to `http://192.168.4.1`
+
+## Configuration
+
+### Customizing the Portal Name
+
+Edit `config.py` and change the `APP_NAME` variable:
+
+```python
+APP_NAME = "Your Custom Portal Name"
+```
+
+### Network Interface Configuration
+
+Update the interface names in `config.py` if needed:
+
+```python
+WIFI_INTERFACE = 'wlan1'    # External WiFi interface
+AP_INTERFACE = 'wlan0'      # Access Point interface
+ETHERNET_INTERFACE = 'eth0' # Ethernet interface
+```
+
+### Security Settings
+
+For production use, update the secret key in `config.py`:
+
+```python
+SECRET_KEY = 'your-secure-secret-key-here'
+```
+
+## Manual Setup (Alternative to setup.sh)
+
+If you prefer manual setup or need to customize the installation:
+
+### 1. System Packages
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y hostapd dnsmasq iptables-persistent python3 python3-pip python3-venv git nginx ufw network-manager
+```
+
+### 2. Python Environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 3. Access Point Configuration
+
+Create `/etc/hostapd/hostapd.conf`:
+
+```
+interface=wlan0
+driver=nl80211
+ssid=TravelNet-YourPi
+hw_mode=g
+channel=7
+wmm_enabled=0
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=TravelNet123
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+country_code=US
+ieee80211n=1
+ieee80211d=1
+```
+
+### 4. DHCP Configuration
+
+Configure `/etc/dnsmasq.conf`:
+
+```
+interface=wlan0
+bind-interfaces
+dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,12h
+dhcp-option=3,192.168.4.1
+dhcp-option=6,192.168.4.1
+server=8.8.8.8
+server=8.8.4.4
+address=/#/192.168.4.1
+```
+
+### 5. Network Configuration
+
+Set static IP for access point interface in `/etc/systemd/network/08-wlan0.network`:
+
+```
+[Match]
+Name=wlan0
+
+[Network]
+Address=192.168.4.1/24
+IPMasquerade=yes
+IPForward=yes
+```
+
+### 6. IP Forwarding
+
+Enable IP forwarding:
+
+```bash
+echo 'net.ipv4.ip_forward=1' | sudo tee -a /etc/sysctl.conf
+```
+
+### 7. Firewall Rules
+
+```bash
+sudo iptables -t nat -A POSTROUTING -o wlan1 -j MASQUERADE
+sudo iptables -A FORWARD -i wlan1 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -A FORWARD -i wlan0 -o wlan1 -j ACCEPT
+sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80
+sudo netfilter-persistent save
+```
+
+### 8. Systemd Service
+
+Create `/etc/systemd/system/travelnet.service`:
+
+```ini
+[Unit]
+Description=TravelNet Portal
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/travelnet-portal
+Environment=PATH=/home/pi/travelnet-portal/venv/bin
+ExecStart=/home/pi/travelnet-portal/venv/bin/python app.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 9. Enable Services
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable hostapd dnsmasq travelnet
+sudo systemctl start hostapd dnsmasq travelnet
+```
+
+## Usage
+
+### Connecting to Public WiFi
+
+1. Connect your device to the TravelNet access point
+2. Open a web browser and navigate to `http://192.168.4.1`
+3. Click "Scan" to find available networks
+4. Select a network and enter the password
+5. Click "Connect" to establish the connection
+
+### Generating QR Codes
+
+1. Navigate to the "QR Connect" page
+2. Enter the WiFi network details
+3. Click "Generate QR Code"
+4. Share the QR code with others for easy connection
+
+### System Management
+
+- **SSH Control**: Enable/disable SSH access through WiFi
+- **System Reboot**: Restart the Raspberry Pi remotely
+- **Status Monitoring**: View real-time connection status
+
+## API Endpoints
+
+- `GET /` - Main dashboard
+- `POST /connect` - Connect to WiFi network
+- `GET /scan` - Scan for available networks
+- `GET /status` - Get system status
+- `POST /system/<action>` - System actions (reboot, ssh_enable, ssh_disable)
+- `GET /qr-connect` - QR code generation page
+- `POST /generate-qr` - Generate WiFi QR code
+
+## Development
+
+### Local Development
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run development server
+python app.py
+```
+
+### Testing on Pi
+
+```bash
+# Check service status
+sudo systemctl status travelnet
+
+# View logs
+sudo journalctl -u travelnet -f
+
+# Restart service
+sudo systemctl restart travelnet
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Can't connect to access point**
+   - Check if hostapd is running: `sudo systemctl status hostapd`
+   - Verify interface configuration: `ip addr show wlan0`
+
+2. **No internet after connecting to public WiFi**
+   - Check if wlan1 is connected: `nmcli device status`
+   - Verify IP forwarding: `cat /proc/sys/net/ipv4/ip_forward`
+
+3. **Web interface not accessible**
+   - Check if service is running: `sudo systemctl status travelnet`
+   - Verify firewall rules: `sudo iptables -L -n`
+
+### Log Files
+
+- Application logs: `/opt/travelnet/logs/travelnet.log`
+- System logs: `sudo journalctl -u travelnet`
+- Network logs: `sudo journalctl -u NetworkManager`
+
+## Security Considerations
+
+- Change default access point password
+- Update SECRET_KEY for production
+- Regularly update system packages
+- Monitor access logs
+- Use strong passwords for SSH access
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For issues and questions:
+- Check the troubleshooting section
+- Review system logs
+- Open an issue on GitHub
+
+---
+
+**Note**: This application is designed for Raspberry Pi but can be adapted for other Linux systems with appropriate modifications to the network configuration.
