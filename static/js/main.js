@@ -38,7 +38,7 @@ function updateCurrentTime() {
 window.scanNetworks = () => portal?.scanNetworks();
 window.connectToNetwork = () => portal?.connectToNetwork();
 window.generateQRCode = () => portal?.generateQRCode();
-window.toggleVPN = () => vpnManager?.toggleVPN();
+window.toggleVPN = () => portal?.toggleVPN();
 window.connectVPN = (configName) => vpnManager?.connectVPN(configName);
 window.disconnectVPN = () => vpnManager?.disconnectVPN();
 window.updateVPNStatus = (connected) => vpnManager?.updateVPNStatus(connected);

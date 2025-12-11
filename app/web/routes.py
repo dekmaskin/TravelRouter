@@ -116,7 +116,7 @@ def index():
 @web_bp.route('/qr-connect')
 @security_manager.rate_limit(max_requests=50)
 def qr_connect_page():
-    """QR code generation page"""
+    """Hotspot QR code page"""
     if not current_app.config['ENABLE_QR_GENERATION']:
         return render_template('error.html',
                              error='Feature Disabled',

@@ -12,23 +12,22 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 
+def _get_version():
+    """Get version from VERSION file"""
+    try:
+        version_file = Path(__file__).parent.parent.parent / 'VERSION'
+        if version_file.exists():
+            return version_file.read_text().strip()
+    except Exception:
+        pass
+    return "1.0.0"  # fallback version
+
+
 class Config:
     """Base configuration class with secure defaults"""
     
     # Application Settings
     APP_NAME = os.environ.get('APP_NAME', 'TravelNet Portal')
-    
-    @classmethod
-    def _get_version(cls):
-        """Get version from VERSION file"""
-        try:
-            version_file = Path(__file__).parent.parent.parent / 'VERSION'
-            if version_file.exists():
-                return version_file.read_text().strip()
-        except Exception:
-            pass
-        return "1.0.0"  # fallback version
-    
     APP_VERSION = _get_version()
     
     # Security Configuration
@@ -60,9 +59,9 @@ class Config:
         'portal.local'
     ]
     
-    # Rate Limiting
-    MAX_REQUESTS_PER_MINUTE = int(os.environ.get('MAX_REQUESTS_PER_MINUTE', '60'))
-    MAX_CONNECTION_ATTEMPTS = int(os.environ.get('MAX_CONNECTION_ATTEMPTS', '5'))
+    # Rate Limiting - Relaxed for local travel router use
+    MAX_REQUESTS_PER_MINUTE = int(os.environ.get('MAX_REQUESTS_PER_MINUTE', '300'))
+    MAX_CONNECTION_ATTEMPTS = int(os.environ.get('MAX_CONNECTION_ATTEMPTS', '20'))
     
     # Input Validation
     SSID_PATTERN = r'^[a-zA-Z0-9\s\-_\.]{1,32}$'

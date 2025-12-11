@@ -114,13 +114,18 @@ class VPNManager {
 
     async toggleVPN() {
         try {
+            console.log('Checking VPN status...');
             const data = await ApiClient.get('/api/v1/vpn/status');
+            console.log('VPN status response:', data);
             
             if (data.success) {
                 if (data.connected) {
+                    console.log('VPN is connected, disconnecting...');
                     await this.disconnectVPN();
                 } else {
+                    console.log('VPN is disconnected, connecting...');
                     if (data.available_configs && data.available_configs.length > 0) {
+                        console.log('Using config:', data.available_configs[0]);
                         await this.connectVPN(data.available_configs[0]);
                     } else {
                         UIHelpers.showNotification('No VPN configurations available. Please upload a configuration first.', 'warning');
@@ -128,6 +133,7 @@ class VPNManager {
                     }
                 }
             } else {
+                console.error('VPN status check failed:', data);
                 UIHelpers.showNotification('Failed to check VPN status', 'error');
             }
         } catch (error) {
@@ -154,12 +160,15 @@ class VPNManager {
         
         try {
             const data = { config_name: configName };
+            console.log('Sending VPN connect request with data:', data);
             const result = await ApiClient.post('/api/v1/vpn/connect', data);
+            console.log('VPN connect response:', result);
             
             if (result.success) {
                 UIHelpers.showNotification(result.message, 'success');
                 this.updateVPNStatus(true);
             } else {
+                console.error('VPN connect failed:', result);
                 UIHelpers.showNotification(result.message || 'Failed to connect to VPN', 'error');
                 this.updateVPNStatus(false);
             }

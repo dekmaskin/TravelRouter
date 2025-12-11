@@ -474,3 +474,91 @@ class NetworkService:
             return 'Disconnection timed out. Please try again.'
         else:
             return 'Disconnection failed. Please try again.'
+    
+    def get_hotspot_credentials(self) -> Dict[str, str]:
+        """
+        Get the actual hotspot SSID and password from system configuration
+        
+        Returns:
+            Dictionary with ssid and password keys
+        """
+        try:
+            # Try to read from hostapd configuration
+            hostapd_config = '/etc/hostapd/hostapd.conf'
+            
+            result = subprocess.run(
+                ['sudo', 'cat', hostapd_config],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                ssid = None
+                password = None
+                
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    if line.startswith('ssid='):
+                        ssid = line.split('=', 1)[1]
+                    elif line.startswith('wpa_passphrase='):
+                        password = line.split('=', 1)[1]
+                
+                if ssid:
+                    logger.info(f"Found hotspot configuration: SSID={ssid[:10]}...")
+                    return {
+                        'ssid': ssid,
+                        'password': password or '',
+                        'security': 'WPA' if password else 'Open'
+                    }
+            
+            # Fallback: try to get from NetworkManager
+            result = subprocess.run(
+                ['nmcli', '-t', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show', '--active'],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split(':')
+                        if len(parts) >= 3 and parts[2] == self.ap_interface:
+                            # Found active connection on AP interface
+                            connection_name = parts[0]
+                            
+                            # Try to get the password for this connection
+                            password_result = subprocess.run(
+                                ['sudo', 'nmcli', '-s', '-g', '802-11-wireless-security.psk', 
+                                 'connection', 'show', connection_name],
+                                capture_output=True, text=True, timeout=10
+                            )
+                            
+                            password = password_result.stdout.strip() if password_result.returncode == 0 else ''
+                            
+                            logger.info(f"Found NetworkManager hotspot: SSID={connection_name[:10]}...")
+                            return {
+                                'ssid': connection_name,
+                                'password': password,
+                                'security': 'WPA' if password else 'Open'
+                            }
+            
+            # Final fallback to config defaults
+            logger.warning("Could not detect actual hotspot configuration, using defaults")
+            return {
+                'ssid': self.default_ap_ssid,
+                'password': current_app.config['DEFAULT_AP_PASSWORD'],
+                'security': 'WPA'
+            }
+            
+        except subprocess.TimeoutExpired:
+            logger.error("Timeout getting hotspot configuration")
+            return {
+                'ssid': self.default_ap_ssid,
+                'password': current_app.config['DEFAULT_AP_PASSWORD'],
+                'security': 'WPA'
+            }
+        except Exception as e:
+            logger.error(f"Error getting hotspot configuration: {e}")
+            return {
+                'ssid': self.default_ap_ssid,
+                'password': current_app.config['DEFAULT_AP_PASSWORD'],
+                'security': 'WPA'
+            }

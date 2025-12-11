@@ -87,8 +87,12 @@ class SecurityManager:
                     
                     # Validate config_name (for VPN requests)
                     if 'config_name' in data:
-                        if not self._validate_config_name(data['config_name']):
+                        config_name = data['config_name']
+                        logger.info(f"Validating config name: {config_name}")
+                        if not self._validate_config_name(config_name):
+                            logger.error(f"Config name validation failed for: {config_name}")
                             raise BadRequest("Invalid configuration name format")
+                        logger.info(f"Config name validation passed for: {config_name}")
                 
                 return f(*args, **kwargs)
             return decorated_function
@@ -124,15 +128,15 @@ class SecurityManager:
     def _is_ip_blocked(self, client_ip: str) -> bool:
         """Check if IP is currently blocked"""
         if client_ip in self.blocked_ips:
-            # Check if block has expired (24 hour block)
-            if time.time() - self.blocked_ips[client_ip] > 86400:
+            # Check if block has expired (2 minute block)
+            if time.time() - self.blocked_ips[client_ip] > 120:
                 del self.blocked_ips[client_ip]
                 return False
             return True
         return False
     
-    def _block_ip(self, client_ip: str, duration: int = 3600):
-        """Block IP for specified duration (default 1 hour)"""
+    def _block_ip(self, client_ip: str, duration: int = 120):
+        """Block IP for specified duration (default 2 minutes)"""
         self.blocked_ips[client_ip] = time.time()
         logger.warning(f"IP {client_ip} blocked for {duration} seconds")
     

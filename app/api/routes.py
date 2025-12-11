@@ -47,7 +47,7 @@ def get_vpn_service():
 
 
 @api_bp.route('/networks/scan', methods=['GET'])
-@security_manager.rate_limit(max_requests=100)
+@security_manager.rate_limit(max_requests=500)
 def scan_networks():
     """
     Scan for available WiFi networks
@@ -78,7 +78,7 @@ def scan_networks():
 
 
 @api_bp.route('/networks/connect', methods=['POST'])
-@security_manager.rate_limit(max_requests=50)  # Will be overridden by config at runtime
+@security_manager.rate_limit(max_requests=100)
 @security_manager.validate_input('json')
 def connect_network():
     """
@@ -122,7 +122,7 @@ def connect_network():
 
 
 @api_bp.route('/networks/disconnect', methods=['POST'])
-@security_manager.rate_limit(max_requests=50)
+@security_manager.rate_limit(max_requests=100)
 def disconnect_network():
     """
     Disconnect from current WiFi network
@@ -153,7 +153,7 @@ def disconnect_network():
 
 
 @api_bp.route('/networks/status', methods=['GET'])
-@security_manager.rate_limit(max_requests=200)
+@security_manager.rate_limit(max_requests=1000)
 def get_connection_status():
     """
     Get current network connection status
@@ -265,6 +265,44 @@ def manage_ssh(action):
             'success': False,
             'error': 'system_error',
             'message': f'SSH {action} operation failed'
+        }), 500
+
+
+@api_bp.route('/qr/hotspot', methods=['GET'])
+@security_manager.rate_limit(max_requests=200)
+def get_hotspot_qr():
+    """
+    Get QR code for the travel router's hotspot
+    
+    Returns:
+        JSON response with hotspot QR code and credentials
+    """
+    try:
+        logger.info(f"Hotspot QR code requested from {request.remote_addr}")
+        
+        # Get actual hotspot credentials from system
+        hotspot_config = get_network_service().get_hotspot_credentials()
+        ssid = hotspot_config['ssid']
+        password = hotspot_config['password']
+        security = hotspot_config['security']
+        
+        # Generate QR code for hotspot
+        result = get_qr_service().generate_wifi_qr(ssid, password, security)
+        
+        if result.success:
+            # Add password to response for display
+            response_data = result.to_dict()
+            response_data['password'] = password
+            return jsonify(response_data)
+        else:
+            return jsonify(result.to_dict()), 500
+        
+    except Exception as e:
+        logger.error(f"Error generating hotspot QR code: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'hotspot_qr_error',
+            'message': 'Failed to generate hotspot QR code'
         }), 500
 
 
@@ -407,7 +445,7 @@ def api_documentation():
 # VPN Management Endpoints
 
 @api_bp.route('/vpn/status', methods=['GET'])
-@security_manager.rate_limit(max_requests=100)
+@security_manager.rate_limit(max_requests=1000)
 def get_vpn_status():
     """
     Get current VPN connection status
@@ -429,7 +467,7 @@ def get_vpn_status():
 
 
 @api_bp.route('/vpn/connect', methods=['POST'])
-@security_manager.rate_limit(max_requests=10)
+@security_manager.rate_limit(max_requests=50)
 @security_manager.validate_input('json')
 def connect_vpn():
     """
@@ -444,8 +482,15 @@ def connect_vpn():
         JSON response with VPN connection result
     """
     try:
+        logger.info(f"VPN connect request received from {request.remote_addr}")
+        logger.info(f"Request content type: {request.content_type}")
+        logger.info(f"Request data: {request.get_data()}")
+        
         data = request.get_json()
+        logger.info(f"Parsed JSON data: {data}")
+        
         config_name = data.get('config_name')
+        logger.info(f"Config name: {config_name}")
         
         if not config_name:
             raise ValidationError('Configuration name is required', 'config_name')
@@ -463,15 +508,23 @@ def connect_vpn():
         return jsonify(result.to_dict())
         
     except (ValidationError, NetworkError) as e:
+        logger.error(f"VPN connect error: {e}")
         return jsonify({
             'success': False,
             'error': type(e).__name__.lower(),
             'message': str(e)
         }), 400 if isinstance(e, ValidationError) else 500
+    except Exception as e:
+        logger.error(f"Unexpected VPN connect error: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'internal_error',
+            'message': 'Internal server error'
+        }), 500
 
 
 @api_bp.route('/vpn/disconnect', methods=['POST'])
-@security_manager.rate_limit(max_requests=20)
+@security_manager.rate_limit(max_requests=50)
 def disconnect_vpn():
     """
     Disconnect from current VPN connection

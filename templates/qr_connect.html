@@ -1,91 +1,53 @@
 {% extends "base.html" %}
 
-{% block title %}QR Connect - {{ app_name }}{% endblock %}
+{% block title %}Hotspot QR Code - {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card status-card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-qrcode me-2"></i>QR Code WiFi Connection</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-4">
-                    Generate a QR code for easy WiFi connection. Scan the code with your phone's camera 
-                    or QR code reader to automatically connect to the network.
-                </p>
-                
-                <form id="qrForm">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="qrSSID" class="form-label">Network Name (SSID) *</label>
-                                <input type="text" class="form-control" id="qrSSID" required 
-                                       placeholder="Enter WiFi network name">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="qrSecurity" class="form-label">Security Type</label>
-                                <select class="form-select" id="qrSecurity">
-                                    <option value="WPA">WPA/WPA2</option>
-                                    <option value="WEP">WEP</option>
-                                    <option value="nopass">Open (No Password)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3" id="passwordField">
-                        <label for="qrPassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="qrPassword" 
-                               placeholder="Enter network password">
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="showPassword">
-                            <label class="form-check-label" for="showPassword">
-                                Show password
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <button type="submit" class="btn btn-primary btn-custom">
-                            <i class="fas fa-qrcode me-1"></i>Generate QR Code
-                            <span class="spinner-border spinner-border-sm ms-2 loading" style="display: none;"></span>
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-custom" onclick="portal.clearQRForm()">
-                            <i class="fas fa-eraser me-1"></i>Clear
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- QR Code Display -->
-<div class="row justify-content-center mt-4" id="qrResult" style="display: none;">
-    <div class="col-md-6">
-        <div class="card status-card">
-            <div class="card-header bg-success text-white text-center">
-                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>QR Code Generated</h5>
+                <h5 class="mb-0"><i class="fas fa-qrcode me-2"></i>Travel Router Hotspot</h5>
             </div>
             <div class="card-body text-center">
-                <div id="qrCodeDisplay" class="mb-3"></div>
-                <div class="alert alert-info alert-custom">
+                <p class="text-muted mb-4">
+                    Scan this QR code with your phone to connect to the travel router's hotspot.
+                </p>
+                
+                <div id="hotspotQRCode" class="mb-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading QR code...</span>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info alert-custom mb-4" style="display: none;" id="hotspotInfo">
+                    <div class="row text-start">
+                        <div class="col-sm-6">
+                            <strong>Network Name:</strong><br>
+                            <code id="hotspotSSID">-</code>
+                        </div>
+                        <div class="col-sm-6">
+                            <strong>Password:</strong><br>
+                            <code id="hotspotPassword">-</code>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success alert-custom" style="display: none;" id="qrInstructions">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>Instructions:</strong> Point your phone's camera at the QR code or use a QR code scanner app. 
+                    <strong>Instructions:</strong> Point your phone's camera at the QR code. 
                     Your device should automatically prompt to connect to the WiFi network.
                 </div>
-                <div class="mb-3">
-                    <small class="text-muted">WiFi String: <code id="wifiString"></code></small>
-                </div>
-                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button class="btn btn-outline-primary btn-custom" onclick="portal.downloadQRCode()">
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center" style="display: none;" id="qrActions">
+                    <button class="btn btn-outline-primary btn-custom" onclick="downloadQRCode()">
                         <i class="fas fa-download me-1"></i>Download QR Code
                     </button>
-                    <button class="btn btn-outline-secondary btn-custom" onclick="portal.printQRCode()">
+                    <button class="btn btn-outline-secondary btn-custom" onclick="printQRCode()">
                         <i class="fas fa-print me-1"></i>Print QR Code
+                    </button>
+                    <button class="btn btn-outline-info btn-custom" onclick="refreshQRCode()">
+                        <i class="fas fa-refresh me-1"></i>Refresh
                     </button>
                 </div>
             </div>
@@ -93,40 +55,95 @@
     </div>
 </div>
 
-<!-- Quick Connect Section -->
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card status-card">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Connect</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">
-                    Generate QR codes for common network types quickly:
-                </p>
-                <div class="row">
-                    <div class="col-md-4 mb-2">
-                        <button class="btn btn-outline-info btn-custom w-100" onclick="portal.quickConnect('Guest', '', 'nopass')">
-                            <i class="fas fa-users me-1"></i>Guest Network
-                        </button>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <button class="btn btn-outline-success btn-custom w-100" onclick="portal.quickConnect('Free-WiFi', '', 'nopass')">
-                            <i class="fas fa-wifi me-1"></i>Free WiFi
-                        </button>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <button class="btn btn-outline-primary btn-custom w-100" onclick="portal.focusSSIDField()">
-                            <i class="fas fa-cog me-1"></i>Custom Network
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+// Load hotspot QR code on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadHotspotQR();
+});
+
+async function loadHotspotQR() {
+    try {
+        // Get hotspot credentials and generate QR code
+        const response = await fetch('/api/v1/qr/hotspot', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Display QR code
+            document.getElementById('hotspotQRCode').innerHTML = 
+                `<img src="${result.qr_code}" alt="Hotspot QR Code" class="img-fluid" style="max-width: 300px;">`;
+            
+            // Show hotspot info
+            document.getElementById('hotspotSSID').textContent = result.ssid;
+            document.getElementById('hotspotPassword').textContent = result.password || 'No password';
+            document.getElementById('hotspotInfo').style.display = 'block';
+            document.getElementById('qrInstructions').style.display = 'block';
+            document.getElementById('qrActions').style.display = 'block';
+        } else {
+            document.getElementById('hotspotQRCode').innerHTML = 
+                `<div class="alert alert-danger">Failed to load QR code: ${result.message}</div>`;
+        }
+    } catch (error) {
+        console.error('Error loading hotspot QR:', error);
+        document.getElementById('hotspotQRCode').innerHTML = 
+            '<div class="alert alert-danger">Failed to load QR code. Please try refreshing the page.</div>';
+    }
+}
+
+function refreshQRCode() {
+    document.getElementById('hotspotQRCode').innerHTML = 
+        '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading QR code...</span></div>';
+    document.getElementById('hotspotInfo').style.display = 'none';
+    document.getElementById('qrInstructions').style.display = 'none';
+    document.getElementById('qrActions').style.display = 'none';
+    loadHotspotQR();
+}
+
+function downloadQRCode() {
+    const img = document.querySelector('#hotspotQRCode img');
+    if (img) {
+        const link = document.createElement('a');
+        link.download = 'hotspot-qr-code.png';
+        link.href = img.src;
+        link.click();
+    }
+}
+
+function printQRCode() {
+    const img = document.querySelector('#hotspotQRCode img');
+    if (img) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Hotspot QR Code</title>
+                    <style>
+                        body { text-align: center; font-family: Arial, sans-serif; }
+                        img { max-width: 400px; }
+                        .info { margin: 20px 0; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Travel Router Hotspot</h2>
+                    <img src="${img.src}" alt="Hotspot QR Code">
+                    <div class="info">
+                        <p><strong>Network:</strong> ${document.getElementById('hotspotSSID').textContent}</p>
+                        <p><strong>Password:</strong> ${document.getElementById('hotspotPassword').textContent}</p>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+}
+</script>
 {% endblock %}
