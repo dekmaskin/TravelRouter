@@ -81,8 +81,14 @@ class SecurityManager:
                     
                     # Validate SSID (only for network requests)
                     if 'ssid' in data:
-                        if not self._validate_ssid(data['ssid']):
-                            raise BadRequest("Invalid SSID format")
+                        # For hotspot config, be more lenient with SSID validation
+                        if request.endpoint == 'api.update_hotspot_config':
+                            ssid = data['ssid']
+                            if not ssid or not isinstance(ssid, str) or len(ssid) > 32:
+                                raise BadRequest("SSID must be 1-32 characters")
+                        else:
+                            if not self._validate_ssid(data['ssid']):
+                                raise BadRequest("Invalid SSID format")
                     
                     # Validate password (only for network requests)
                     if 'password' in data and data['password']:
