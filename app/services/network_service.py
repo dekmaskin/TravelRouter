@@ -84,14 +84,21 @@ class NetworkService:
             networks = []
             seen_networks = {}  # Track networks by SSID to avoid duplicates
             
+            # Get current hotspot SSID to filter it out
+            try:
+                hotspot_config = self.get_hotspot_credentials()
+                current_hotspot_ssid = hotspot_config.get('ssid', '')
+            except Exception:
+                current_hotspot_ssid = ''
+            
             for line in result.stdout.strip().split('\n'):
                 if line and ':' in line:
                     parts = line.split(':')
                     if len(parts) >= 3 and parts[0]:
                         ssid = parts[0].strip()
                         
-                        # Filter out empty SSIDs
-                        if ssid:
+                        # Filter out empty SSIDs and our own hotspot
+                        if ssid and ssid != current_hotspot_ssid:
                             try:
                                 signal = int(parts[2]) if parts[2].isdigit() else 0
                                 security = parts[1].strip() if parts[1] else 'Open'
