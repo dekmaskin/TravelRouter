@@ -157,15 +157,17 @@ class SystemService:
                 f.write('STARTING\n')
             
             # Run the update script in the background with status tracking
-            # We don't wait for completion as it may take a while and restart services
-            cmd = ['sudo', 'bash', update_script]
+            # Use nohup to ensure the script survives service shutdown
+            cmd = ['nohup', 'sudo', 'bash', update_script]
             
             # Start the process but don't wait for completion
+            # Use a separate session to prevent it from being killed with the service
             process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                start_new_session=True
             )
             
             logger.info(f"Update process started with PID: {process.pid}")
