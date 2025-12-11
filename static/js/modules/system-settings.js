@@ -9,7 +9,7 @@
  * - System logs viewing
  */
 
-import { showAlert, showLoading, hideLoading, formatBytes, formatUptime } from './ui-helpers.js';
+import { showAlert, showLoading, hideLoading, setLoadingState, formatBytes, formatUptime } from './ui-helpers.js';
 
 class SystemSettingsManager {
     constructor() {
@@ -54,21 +54,27 @@ class SystemSettingsManager {
 
     async loadCurrentHotspotSettings() {
         try {
-            showLoading('Loading hotspot settings...');
-            
+            console.log('Loading hotspot settings...');
             const response = await fetch('/api/v1/hotspot/config');
+            console.log('Hotspot config response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
+            console.log('Hotspot config data:', data);
             
             if (data.success && data.config) {
                 this.populateHotspotForm(data.config);
+                console.log('Hotspot form populated with:', data.config);
             } else {
-                showAlert('warning', 'Could not load current hotspot settings');
+                console.warn('Could not load current hotspot settings:', data.message || data.error);
+                // Don't show error alert on page load, just log it
             }
         } catch (error) {
             console.error('Error loading hotspot settings:', error);
-            showAlert('danger', 'Failed to load hotspot settings');
-        } finally {
-            hideLoading();
+            // Don't show error alert on page load, just log it
         }
     }
 
@@ -118,7 +124,7 @@ class SystemSettingsManager {
 
         try {
             const submitBtn = form.querySelector('button[type="submit"]');
-            showLoading('Updating hotspot configuration...', submitBtn);
+            setLoadingState(submitBtn, true);
 
             const response = await fetch('/api/v1/hotspot/config', {
                 method: 'POST',
@@ -141,7 +147,8 @@ class SystemSettingsManager {
             console.error('Error updating hotspot config:', error);
             showAlert('danger', 'Failed to update hotspot configuration');
         } finally {
-            hideLoading();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            setLoadingState(submitBtn, false);
         }
     }
 
@@ -163,17 +170,43 @@ class SystemSettingsManager {
     }
 
     async refreshSystemStatus() {
+        const container = document.getElementById('systemStatusContent');
+        if (!container) {
+            console.error('System status container not found');
+            return;
+        }
+
         try {
+            console.log('Fetching system status...');
             const response = await fetch('/api/v1/system/status');
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
+            console.log('System status data:', data);
 
             if (data.success) {
                 this.updateSystemStatusDisplay(data);
             } else {
-                console.error('Failed to get system status:', data.message);
+                console.error('Failed to get system status:', data.message || data.error);
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Could not load system status: ${data.message || data.error || 'Unknown error'}
+                    </div>
+                `;
             }
         } catch (error) {
             console.error('Error refreshing system status:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Failed to load system status: ${error.message}
+                </div>
+            `;
         }
     }
 
@@ -238,9 +271,9 @@ class SystemSettingsManager {
             return;
         }
 
+        const btn = event.target.closest('button');
         try {
-            const btn = event.target.closest('button');
-            showLoading('Restarting network services...', btn);
+            setLoadingState(btn, true);
 
             const response = await fetch('/api/v1/system/restart-network', {
                 method: 'POST'
@@ -259,7 +292,7 @@ class SystemSettingsManager {
             console.error('Error restarting network:', error);
             showAlert('danger', 'Failed to restart network services');
         } finally {
-            hideLoading();
+            setLoadingState(btn, false);
         }
     }
 
@@ -272,9 +305,9 @@ class SystemSettingsManager {
             return;
         }
 
+        const btn = event.target.closest('button');
         try {
-            const btn = event.target.closest('button');
-            showLoading('Rebooting system...', btn);
+            setLoadingState(btn, true);
 
             const response = await fetch('/api/v1/system/reboot', {
                 method: 'POST'
@@ -290,18 +323,35 @@ class SystemSettingsManager {
                 });
             } else {
                 showAlert('danger', data.message || 'Failed to reboot system');
+                setLoadingState(btn, false);
             }
         } catch (error) {
             console.error('Error rebooting system:', error);
             showAlert('danger', 'Failed to reboot system');
-        } finally {
-            hideLoading();
+            setLoadingState(btn, false);
         }
     }
 
     async viewSystemLogs() {
-        const modal = new bootstrap.Modal(document.getElementById('systemLogsModal'));
-        modal.show();
+        const modalElement = document.getElementById('systemLogsModal');
+        if (!modalElement) {
+            console.error('System logs modal not found');
+            showAlert('danger', 'System logs modal not available');
+            return;
+        }
+
+        // Use Bootstrap 5 modal API
+        let modal;
+        try {
+            modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            modal.show();
+        } catch (error) {
+            console.error('Error showing modal:', error);
+            // Fallback: show modal manually
+            modalElement.style.display = 'block';
+            modalElement.classList.add('show');
+            document.body.classList.add('modal-open');
+        }
         
         // Load initial logs
         await this.loadSystemLogs();

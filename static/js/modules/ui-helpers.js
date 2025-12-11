@@ -43,6 +43,36 @@ class UIHelpers {
         }
     }
 
+    static showLoading(message = 'Loading...', element = null) {
+        if (element) {
+            // Show loading on specific element
+            this.setLoadingState(element, true);
+        } else {
+            // Show global loading overlay
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                const messageElement = overlay.querySelector('p');
+                if (messageElement) {
+                    messageElement.textContent = message;
+                }
+                overlay.style.display = 'flex';
+            }
+        }
+    }
+
+    static hideLoading(element = null) {
+        if (element) {
+            // Hide loading on specific element
+            this.setLoadingState(element, false);
+        } else {
+            // Hide global loading overlay
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+    }
+
     static getSignalBars(strength) {
         let bars = 0;
         let color = 'text-danger';
@@ -76,5 +106,27 @@ class UIHelpers {
         return barsHtml;
     }
 }
+
+// Export individual functions for convenience
+export const showAlert = (type, message) => UIHelpers.showAlert(message, type);
+export const showLoading = (message, element) => UIHelpers.showLoading(message, element);
+export const hideLoading = (element) => UIHelpers.hideLoading(element);
+export const setLoadingState = (element, isLoading, originalText) => UIHelpers.setLoadingState(element, isLoading, originalText);
+export const formatBytes = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+export const formatUptime = (seconds) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+};
 
 export default UIHelpers;

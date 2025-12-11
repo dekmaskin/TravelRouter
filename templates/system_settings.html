@@ -23,6 +23,7 @@
                 <div class="col-md-6 mb-3">
                     <label for="hotspotSSID" class="form-label">Hotspot SSID</label>
                     <input type="text" class="form-control" id="hotspotSSID" name="ssid" 
+                           value="{{ hotspot_config.ssid if hotspot_config else '' }}"
                            placeholder="Enter hotspot name" maxlength="32" required>
                     <div class="form-text">Network name visible to devices (1-32 characters)</div>
                 </div>
@@ -30,6 +31,7 @@
                     <label for="hotspotPassword" class="form-label">Hotspot Password</label>
                     <div class="input-group">
                         <input type="password" class="form-control" id="hotspotPassword" name="password" 
+                               value="{{ hotspot_config.password if hotspot_config else '' }}"
                                placeholder="Enter password" minlength="8" maxlength="63">
                         <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                             <i class="fas fa-eye"></i>
@@ -41,7 +43,8 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="hotspotVisible" name="visible" checked>
+                        <input class="form-check-input" type="checkbox" id="hotspotVisible" name="visible" 
+                               {{ 'checked' if not hotspot_config or hotspot_config.visible != False else '' }}>
                         <label class="form-check-label" for="hotspotVisible">
                             Hotspot Visibility
                         </label>
@@ -50,7 +53,8 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="hotspotEnabled" name="enabled" checked>
+                        <input class="form-check-input" type="checkbox" id="hotspotEnabled" name="enabled" 
+                               {{ 'checked' if not hotspot_config or hotspot_config.enabled != False else '' }}>
                         <label class="form-check-label" for="hotspotEnabled">
                             Enable Hotspot
                         </label>
