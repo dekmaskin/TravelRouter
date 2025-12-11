@@ -365,6 +365,49 @@ def update_hotspot_config():
         }), 500
 
 
+@api_bp.route('/system/interfaces', methods=['GET'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
+def get_network_interfaces():
+    """
+    Get information about network interfaces
+    
+    Returns:
+        JSON response with interface information
+    """
+    try:
+        logger.info(f"Network interfaces info requested from {request.remote_addr}")
+        
+        network_service = get_network_service()
+        
+        # Get configured interfaces
+        configured = {
+            'wifi_interface': network_service.wifi_interface,
+            'ap_interface': network_service.ap_interface,
+            'ethernet_interface': current_app.config['ETHERNET_INTERFACE']
+        }
+        
+        # Get available WiFi interfaces
+        available_wifi = network_service._get_available_wifi_interfaces()
+        
+        # Check AP interface status
+        ap_check = network_service._check_ap_interface()
+        
+        return jsonify({
+            'success': True,
+            'configured': configured,
+            'available_wifi_interfaces': available_wifi,
+            'ap_interface_status': ap_check
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting network interfaces: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'interfaces_error',
+            'message': 'Failed to get network interface information'
+        }), 500
+
+
 
 
 

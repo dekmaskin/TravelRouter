@@ -617,6 +617,15 @@ class NetworkService:
         """Update hotspot using NetworkManager"""
         try:
             logger.info(f"Updating NetworkManager hotspot: SSID={ssid}, enabled={enabled}, visible={visible}")
+            logger.info(f"Using AP interface: {self.ap_interface}")
+            
+            # Check if the AP interface exists and is available
+            interface_check = self._check_ap_interface()
+            if not interface_check['available']:
+                return ConnectionResult(
+                    success=False,
+                    message=f'AP interface {self.ap_interface} is not available: {interface_check["reason"]}'
+                )
             
             # First, find any existing hotspot connections on the AP interface
             existing_connections = self._find_ap_connections()
@@ -653,6 +662,9 @@ class NetworkService:
                     logger.info(f"Deleted existing connection: {connection_name}")
                 except Exception as e:
                     logger.warning(f"Failed to delete existing connection: {e}")
+            
+            # Also delete any connections that might be using the AP interface
+            self._cleanup_ap_interface()
             
             # Create new hotspot connection
             cmd = ['sudo', 'nmcli', 'connection', 'add', 'type', 'wifi', 'ifname', self.ap_interface]
@@ -704,10 +716,31 @@ class NetworkService:
             else:
                 error_msg = result.stderr.strip() or result.stdout.strip()
                 logger.error(f"Failed to activate hotspot: {error_msg}")
-                return ConnectionResult(
-                    success=False,
-                    message=f'Hotspot created but failed to activate: {error_msg}'
-                )
+                
+                # Provide more specific error messages
+                if 'no suitable device' in error_msg.lower():
+                    # Get available interfaces for better error message
+                    available_interfaces = self._get_available_wifi_interfaces()
+                    interface_info = f" Available WiFi interfaces: {', '.join(available_interfaces)}" if available_interfaces else ""
+                    
+                    return ConnectionResult(
+                        success=False,
+                        message=f'No suitable device found. Interface {self.ap_interface} may not support AP mode or is busy.{interface_info}'
+                    )
+                elif 'device not found' in error_msg.lower():
+                    # Get available interfaces for better error message
+                    available_interfaces = self._get_available_wifi_interfaces()
+                    interface_info = f" Available WiFi interfaces: {', '.join(available_interfaces)}" if available_interfaces else ""
+                    
+                    return ConnectionResult(
+                        success=False,
+                        message=f'Interface {self.ap_interface} not found.{interface_info} Check your AP_INTERFACE configuration.'
+                    )
+                else:
+                    return ConnectionResult(
+                        success=False,
+                        message=f'Hotspot created but failed to activate: {error_msg}'
+                    )
                     
         except subprocess.TimeoutExpired:
             logger.error("Timeout updating NetworkManager hotspot")
@@ -721,6 +754,77 @@ class NetworkService:
                 success=False,
                 message=f'Failed to update hotspot: {str(e)}'
             )
+    
+    def _check_ap_interface(self) -> Dict[str, Any]:
+        """Check if the AP interface is available and suitable for hotspot"""
+        try:
+            # Check if interface exists
+            result = subprocess.run(
+                ['nmcli', 'device', 'show', self.ap_interface],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode != 0:
+                return {
+                    'available': False,
+                    'reason': f'Interface {self.ap_interface} not found'
+                }
+            
+            # Check interface state
+            result = subprocess.run(
+                ['nmcli', '-t', '-f', 'DEVICE,STATE,TYPE', 'device', 'status'],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split(':')
+                        if len(parts) >= 3 and parts[0] == self.ap_interface:
+                            device, state, dev_type = parts[0], parts[1], parts[2]
+                            logger.info(f"AP interface {device} state: {state}, type: {dev_type}")
+                            
+                            if dev_type != 'wifi':
+                                return {
+                                    'available': False,
+                                    'reason': f'Interface {self.ap_interface} is not a WiFi interface (type: {dev_type})'
+                                }
+                            
+                            # Interface exists and is WiFi type
+                            return {
+                                'available': True,
+                                'state': state,
+                                'type': dev_type
+                            }
+            
+            return {
+                'available': False,
+                'reason': f'Could not determine state of interface {self.ap_interface}'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking AP interface: {e}")
+            return {
+                'available': False,
+                'reason': f'Error checking interface: {str(e)}'
+            }
+    
+    def _cleanup_ap_interface(self):
+        """Clean up any existing connections on the AP interface"""
+        try:
+            # Disconnect any active connections on the AP interface
+            result = subprocess.run(
+                ['sudo', 'nmcli', 'device', 'disconnect', self.ap_interface],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                logger.info(f"Disconnected AP interface {self.ap_interface}")
+            else:
+                logger.debug(f"AP interface {self.ap_interface} was not connected")
+                
+        except Exception as e:
+            logger.warning(f"Error cleaning up AP interface: {e}")
     
     def _find_ap_connections(self) -> List[str]:
         """Find all AP mode connections on the AP interface"""
@@ -745,5 +849,29 @@ class NetworkService:
             
         except Exception as e:
             logger.warning(f"Error finding AP connections: {e}")
+            return []
+    
+    def _get_available_wifi_interfaces(self) -> List[str]:
+        """Get list of available WiFi interfaces"""
+        try:
+            result = subprocess.run(
+                ['nmcli', '-t', '-f', 'DEVICE,TYPE', 'device', 'status'],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            wifi_interfaces = []
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split(':')
+                        if len(parts) >= 2:
+                            device, dev_type = parts[0], parts[1]
+                            if dev_type == 'wifi':
+                                wifi_interfaces.append(device)
+            
+            return wifi_interfaces
+            
+        except Exception as e:
+            logger.warning(f"Error getting WiFi interfaces: {e}")
             return []
     
