@@ -39,7 +39,7 @@ def get_vpn_service():
 
 
 @web_bp.route('/')
-@security_manager.rate_limit(max_requests=100)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def index():
     """
     Main dashboard page
@@ -100,7 +100,6 @@ def index():
                              vpn_status=vpn_status,
                              current_ssid=current_ssid,
                              features={
-                                 'ssh_management': current_app.config['ENABLE_SSH_MANAGEMENT'],
                                  'system_reboot': current_app.config['ENABLE_SYSTEM_REBOOT'],
                                  'qr_generation': current_app.config['ENABLE_QR_GENERATION'],
                                  'vpn_tunnel': True
@@ -114,7 +113,7 @@ def index():
 
 
 @web_bp.route('/qr-connect')
-@security_manager.rate_limit(max_requests=50)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def qr_connect_page():
     """Hotspot QR code page"""
     if not current_app.config['ENABLE_QR_GENERATION']:
@@ -176,7 +175,7 @@ def captive_success():
 
 # Legacy API routes for JavaScript compatibility
 @web_bp.route('/connect', methods=['POST'])
-@security_manager.rate_limit(max_requests=5)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
 def connect_wifi():
     """Legacy WiFi connection endpoint"""
     try:
@@ -193,7 +192,7 @@ def connect_wifi():
 
 
 @web_bp.route('/scan', methods=['GET'])
-@security_manager.rate_limit(max_requests=10)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def scan_networks():
     """Legacy network scanning endpoint"""
     try:
@@ -208,7 +207,7 @@ def scan_networks():
         return {'success': False, 'message': 'Scan failed'}, 500
 
 @web_bp.route('/vpn-tunnel')
-@security_manager.rate_limit(max_requests=50)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def vpn_tunnel_page():
     """VPN tunnel management page"""
     try:

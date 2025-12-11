@@ -63,6 +63,15 @@ class Config:
     MAX_REQUESTS_PER_MINUTE = int(os.environ.get('MAX_REQUESTS_PER_MINUTE', '300'))
     MAX_CONNECTION_ATTEMPTS = int(os.environ.get('MAX_CONNECTION_ATTEMPTS', '20'))
     
+    # Rate limits by category (requests per minute)
+    RATE_LIMIT_HIGH = int(os.environ.get('RATE_LIMIT_HIGH', '1000'))      # Status checks, frequent polling
+    RATE_LIMIT_NORMAL = int(os.environ.get('RATE_LIMIT_NORMAL', '200'))   # Regular operations, web pages
+    RATE_LIMIT_LOW = int(os.environ.get('RATE_LIMIT_LOW', '50'))          # Network/VPN connections
+    RATE_LIMIT_CRITICAL = int(os.environ.get('RATE_LIMIT_CRITICAL', '5')) # System reboot, critical operations
+    
+    # IP blocking settings
+    IP_BLOCK_DURATION = int(os.environ.get('IP_BLOCK_DURATION', '120'))  # seconds
+    
     # Input Validation
     SSID_PATTERN = r'^[a-zA-Z0-9\s\-_\.]{1,32}$'
     PASSWORD_MIN_LENGTH = 8
@@ -74,7 +83,6 @@ class Config:
     AP_IP = os.environ.get('AP_IP', '192.168.4.1')
     
     # Feature Flags
-    ENABLE_SSH_MANAGEMENT = os.environ.get('ENABLE_SSH_MANAGEMENT', 'true').lower() == 'true'
     ENABLE_SYSTEM_REBOOT = os.environ.get('ENABLE_SYSTEM_REBOOT', 'true').lower() == 'true'
     ENABLE_QR_GENERATION = os.environ.get('ENABLE_QR_GENERATION', 'true').lower() == 'true'
     ENABLE_VPN_TUNNEL = os.environ.get('ENABLE_VPN_TUNNEL', 'true').lower() == 'true'
@@ -84,11 +92,7 @@ class Config:
         'reboot': ['sudo', 'reboot'],
         'wifi_scan': ['nmcli', '--colors', 'no', '-t', '-f', 'SSID,SECURITY,SIGNAL', 'dev', 'wifi', 'list'],
         'wifi_connect': ['nmcli', 'device', 'wifi', 'connect'],
-        'wifi_status': ['nmcli', '--colors', 'no', 'device', 'status'],
-        'enable_ssh': ['sudo', 'systemctl', 'enable', 'ssh'],
-        'start_ssh': ['sudo', 'systemctl', 'start', 'ssh'],
-        'stop_ssh': ['sudo', 'systemctl', 'stop', 'ssh'],
-        'ssh_status': ['sudo', 'systemctl', 'is-active', 'ssh']
+        'wifi_status': ['nmcli', '--colors', 'no', 'device', 'status']
     }
     
     @classmethod

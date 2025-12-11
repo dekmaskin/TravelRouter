@@ -47,7 +47,7 @@ def get_vpn_service():
 
 
 @api_bp.route('/networks/scan', methods=['GET'])
-@security_manager.rate_limit(max_requests=500)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def scan_networks():
     """
     Scan for available WiFi networks
@@ -78,7 +78,7 @@ def scan_networks():
 
 
 @api_bp.route('/networks/connect', methods=['POST'])
-@security_manager.rate_limit(max_requests=100)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
 @security_manager.validate_input('json')
 def connect_network():
     """
@@ -122,7 +122,7 @@ def connect_network():
 
 
 @api_bp.route('/networks/disconnect', methods=['POST'])
-@security_manager.rate_limit(max_requests=100)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
 def disconnect_network():
     """
     Disconnect from current WiFi network
@@ -153,7 +153,7 @@ def disconnect_network():
 
 
 @api_bp.route('/networks/status', methods=['GET'])
-@security_manager.rate_limit(max_requests=1000)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_HIGH'])
 def get_connection_status():
     """
     Get current network connection status
@@ -175,7 +175,7 @@ def get_connection_status():
 
 
 @api_bp.route('/system/status', methods=['GET'])
-@security_manager.rate_limit(max_requests=20)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def get_system_status():
     """
     Get system status information
@@ -197,7 +197,7 @@ def get_system_status():
 
 
 @api_bp.route('/system/reboot', methods=['POST'])
-@security_manager.rate_limit(max_requests=2)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_CRITICAL'])
 def reboot_system():
     """
     Reboot the system
@@ -226,50 +226,11 @@ def reboot_system():
         }), 500
 
 
-@api_bp.route('/system/ssh/<action>', methods=['POST'])
-@security_manager.rate_limit(max_requests=5)
-def manage_ssh(action):
-    """
-    Manage SSH service
-    
-    Args:
-        action: 'enable' or 'disable'
-    
-    Returns:
-        JSON response with SSH management result
-    """
-    try:
-        if action not in ['enable', 'disable']:
-            raise ValidationError('Invalid SSH action')
-        
-        logger.warning(f"SSH {action} requested from {request.remote_addr}")
-        
-        result = get_system_service().manage_ssh(action)
-        return jsonify(result.to_dict())
-        
-    except SecurityError as e:
-        return jsonify({
-            'success': False,
-            'error': 'security_error',
-            'message': 'SSH management not permitted'
-        }), 403
-    except ValidationError as e:
-        return jsonify({
-            'success': False,
-            'error': 'validation_error',
-            'message': str(e)
-        }), 400
-    except Exception as e:
-        logger.error(f"Error managing SSH: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'system_error',
-            'message': f'SSH {action} operation failed'
-        }), 500
+
 
 
 @api_bp.route('/qr/hotspot', methods=['GET'])
-@security_manager.rate_limit(max_requests=200)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def get_hotspot_qr():
     """
     Get QR code for the travel router's hotspot
@@ -307,7 +268,7 @@ def get_hotspot_qr():
 
 
 @api_bp.route('/qr/generate', methods=['POST'])
-@security_manager.rate_limit(max_requests=20)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 @security_manager.validate_input('json')
 def generate_qr_code():
     """
@@ -353,7 +314,7 @@ def generate_qr_code():
 
 
 @api_bp.route('/qr/parse', methods=['POST'])
-@security_manager.rate_limit(max_requests=30)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 @security_manager.validate_input('json')
 def parse_qr_code():
     """
@@ -424,7 +385,7 @@ def api_documentation():
             'GET /api/v1/networks/status': 'Get current connection status',
             'GET /api/v1/system/status': 'Get system status',
             'POST /api/v1/system/reboot': 'Reboot the system',
-            'POST /api/v1/system/ssh/<action>': 'Manage SSH service (enable/disable)',
+
             'POST /api/v1/qr/generate': 'Generate WiFi QR codes',
             'POST /api/v1/qr/parse': 'Parse WiFi QR code data',
             'GET /api/v1/docs': 'This documentation'
@@ -445,7 +406,7 @@ def api_documentation():
 # VPN Management Endpoints
 
 @api_bp.route('/vpn/status', methods=['GET'])
-@security_manager.rate_limit(max_requests=1000)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_HIGH'])
 def get_vpn_status():
     """
     Get current VPN connection status
@@ -467,7 +428,7 @@ def get_vpn_status():
 
 
 @api_bp.route('/vpn/connect', methods=['POST'])
-@security_manager.rate_limit(max_requests=50)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
 @security_manager.validate_input('json')
 def connect_vpn():
     """
@@ -524,7 +485,7 @@ def connect_vpn():
 
 
 @api_bp.route('/vpn/disconnect', methods=['POST'])
-@security_manager.rate_limit(max_requests=50)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
 def disconnect_vpn():
     """
     Disconnect from current VPN connection
@@ -555,7 +516,7 @@ def disconnect_vpn():
 
 
 @api_bp.route('/vpn/configs', methods=['GET'])
-@security_manager.rate_limit(max_requests=50)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def list_vpn_configs():
     """
     List available VPN configurations
@@ -582,7 +543,7 @@ def list_vpn_configs():
 
 
 @api_bp.route('/vpn/configs', methods=['POST'])
-@security_manager.rate_limit(max_requests=5)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_CRITICAL'])
 @security_manager.validate_input('json')
 def upload_vpn_config():
     """
@@ -629,7 +590,7 @@ def upload_vpn_config():
 
 
 @api_bp.route('/vpn/configs/<config_name>', methods=['DELETE'])
-@security_manager.rate_limit(max_requests=10)
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_CRITICAL'])
 def delete_vpn_config(config_name):
     """
     Delete a VPN configuration

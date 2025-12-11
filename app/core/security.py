@@ -39,7 +39,7 @@ class SecurityManager:
             response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data:;"
             return response
     
-    def rate_limit(self, max_requests: Optional[int] = None, window: int = 60):
+    def rate_limit(self, max_requests=None, window: int = 60):
         """Rate limiting decorator"""
         def decorator(f):
             @wraps(f)
@@ -51,7 +51,11 @@ class SecurityManager:
                     logger.warning(f"Blocked IP {client_ip} attempted access")
                     raise TooManyRequests("IP temporarily blocked due to excessive requests")
                 
-                limit = max_requests or current_app.config['MAX_REQUESTS_PER_MINUTE']
+                # Handle lambda functions for dynamic config values
+                if callable(max_requests):
+                    limit = max_requests()
+                else:
+                    limit = max_requests or current_app.config['MAX_REQUESTS_PER_MINUTE']
                 
                 if not self._check_rate_limit(client_ip, limit, window):
                     logger.warning(f"Rate limit exceeded for {client_ip}")
@@ -128,15 +132,17 @@ class SecurityManager:
     def _is_ip_blocked(self, client_ip: str) -> bool:
         """Check if IP is currently blocked"""
         if client_ip in self.blocked_ips:
-            # Check if block has expired (2 minute block)
-            if time.time() - self.blocked_ips[client_ip] > 120:
+            # Check if block has expired (configurable duration)
+            block_duration = current_app.config.get('IP_BLOCK_DURATION', 120)
+            if time.time() - self.blocked_ips[client_ip] > block_duration:
                 del self.blocked_ips[client_ip]
                 return False
             return True
         return False
     
-    def _block_ip(self, client_ip: str, duration: int = 120):
-        """Block IP for specified duration (default 2 minutes)"""
+    def _block_ip(self, client_ip: str):
+        """Block IP for configured duration"""
+        duration = current_app.config.get('IP_BLOCK_DURATION', 120)
         self.blocked_ips[client_ip] = time.time()
         logger.warning(f"IP {client_ip} blocked for {duration} seconds")
     
