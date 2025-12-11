@@ -12,6 +12,7 @@ from app.core.security import security_manager
 from app.core.errors import ValidationError, NetworkError, SecurityError
 from app.services.network_service import NetworkService
 from app.services.system_service import SystemService
+from app.services.vpn_service import VPNService
 from app.services.qr_service import QRCodeService
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,12 @@ def get_qr_service():
     if not hasattr(current_app, 'qr_service'):
         current_app.qr_service = QRCodeService()
     return current_app.qr_service
+
+def get_vpn_service():
+    """Get VPN service instance"""
+    if not hasattr(current_app, 'vpn_service'):
+        current_app.vpn_service = VPNService()
+    return current_app.vpn_service
 
 
 @api_bp.route('/networks/scan', methods=['GET'])
@@ -395,3 +402,210 @@ def api_documentation():
     }
     
     return jsonify(docs)
+
+
+# VPN Management Endpoints
+
+@api_bp.route('/vpn/status', methods=['GET'])
+@security_manager.rate_limit(max_requests=100)
+def get_vpn_status():
+    """
+    Get current VPN connection status
+    
+    Returns:
+        JSON response with VPN status information
+    """
+    try:
+        status = get_vpn_service().get_vpn_status()
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Error getting VPN status: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'vpn_status_error',
+            'message': 'Failed to retrieve VPN status'
+        }), 500
+
+
+@api_bp.route('/vpn/connect', methods=['POST'])
+@security_manager.rate_limit(max_requests=10)
+@security_manager.validate_input('json')
+def connect_vpn():
+    """
+    Connect to VPN using specified configuration
+    
+    Request Body:
+        {
+            "config_name": "home_server"
+        }
+    
+    Returns:
+        JSON response with VPN connection result
+    """
+    try:
+        data = request.get_json()
+        config_name = data.get('config_name')
+        
+        if not config_name:
+            raise ValidationError('Configuration name is required', 'config_name')
+        
+        logger.info(f"VPN connection attempt from {request.remote_addr} using config: {config_name}")
+        
+        result = get_vpn_service().connect_vpn(config_name)
+        
+        # Log result (without sensitive info)
+        if result.success:
+            logger.info(f"Successful VPN connection using config: {config_name}")
+        else:
+            logger.warning(f"Failed VPN connection attempt using config: {config_name}")
+        
+        return jsonify(result.to_dict())
+        
+    except (ValidationError, NetworkError) as e:
+        return jsonify({
+            'success': False,
+            'error': type(e).__name__.lower(),
+            'message': str(e)
+        }), 400 if isinstance(e, ValidationError) else 500
+
+
+@api_bp.route('/vpn/disconnect', methods=['POST'])
+@security_manager.rate_limit(max_requests=20)
+def disconnect_vpn():
+    """
+    Disconnect from current VPN connection
+    
+    Returns:
+        JSON response with VPN disconnection result
+    """
+    try:
+        logger.info(f"VPN disconnection requested from {request.remote_addr}")
+        
+        result = get_vpn_service().disconnect_vpn()
+        
+        # Log result
+        if result.success:
+            logger.info("Successfully disconnected from VPN")
+        else:
+            logger.warning("Failed VPN disconnection attempt")
+        
+        return jsonify(result.to_dict())
+        
+    except Exception as e:
+        logger.error(f"Error disconnecting from VPN: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'vpn_disconnect_error',
+            'message': 'Failed to disconnect from VPN'
+        }), 500
+
+
+@api_bp.route('/vpn/configs', methods=['GET'])
+@security_manager.rate_limit(max_requests=50)
+def list_vpn_configs():
+    """
+    List available VPN configurations
+    
+    Returns:
+        JSON response with list of available VPN configurations
+    """
+    try:
+        status = get_vpn_service().get_vpn_status()
+        
+        return jsonify({
+            'success': True,
+            'configs': status.get('available_configs', []),
+            'count': len(status.get('available_configs', []))
+        })
+        
+    except Exception as e:
+        logger.error(f"Error listing VPN configs: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'vpn_list_error',
+            'message': 'Failed to list VPN configurations'
+        }), 500
+
+
+@api_bp.route('/vpn/configs', methods=['POST'])
+@security_manager.rate_limit(max_requests=5)
+@security_manager.validate_input('json')
+def upload_vpn_config():
+    """
+    Upload a new VPN configuration
+    
+    Request Body:
+        {
+            "config_name": "home_server",
+            "config_content": "[Interface]\nPrivateKey = ...\n[Peer]\nPublicKey = ..."
+        }
+    
+    Returns:
+        JSON response with upload result
+    """
+    try:
+        data = request.get_json()
+        config_name = data.get('config_name')
+        config_content = data.get('config_content')
+        
+        if not config_name:
+            raise ValidationError('Configuration name is required', 'config_name')
+        
+        if not config_content:
+            raise ValidationError('Configuration content is required', 'config_content')
+        
+        logger.info(f"VPN config upload requested from {request.remote_addr} for: {config_name}")
+        
+        result = get_vpn_service().upload_config(config_name, config_content)
+        
+        # Log result
+        if result.success:
+            logger.info(f"Successfully uploaded VPN config: {config_name}")
+        else:
+            logger.warning(f"Failed to upload VPN config: {config_name}")
+        
+        return jsonify(result.to_dict())
+        
+    except (ValidationError, NetworkError) as e:
+        return jsonify({
+            'success': False,
+            'error': type(e).__name__.lower(),
+            'message': str(e)
+        }), 400 if isinstance(e, ValidationError) else 500
+
+
+@api_bp.route('/vpn/configs/<config_name>', methods=['DELETE'])
+@security_manager.rate_limit(max_requests=10)
+def delete_vpn_config(config_name):
+    """
+    Delete a VPN configuration
+    
+    Args:
+        config_name: Name of the configuration to delete
+    
+    Returns:
+        JSON response with deletion result
+    """
+    try:
+        if not config_name:
+            raise ValidationError('Configuration name is required', 'config_name')
+        
+        logger.info(f"VPN config deletion requested from {request.remote_addr} for: {config_name}")
+        
+        result = get_vpn_service().delete_config(config_name)
+        
+        # Log result
+        if result.success:
+            logger.info(f"Successfully deleted VPN config: {config_name}")
+        else:
+            logger.warning(f"Failed to delete VPN config: {config_name}")
+        
+        return jsonify(result.to_dict())
+        
+    except (ValidationError, NetworkError) as e:
+        return jsonify({
+            'success': False,
+            'error': type(e).__name__.lower(),
+            'message': str(e)
+        }), 400 if isinstance(e, ValidationError) else 500

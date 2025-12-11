@@ -75,15 +75,20 @@ class SecurityManager:
                     if not data:
                         raise BadRequest("Invalid JSON data")
                     
-                    # Validate SSID
+                    # Validate SSID (only for network requests)
                     if 'ssid' in data:
                         if not self._validate_ssid(data['ssid']):
                             raise BadRequest("Invalid SSID format")
                     
-                    # Validate password
+                    # Validate password (only for network requests)
                     if 'password' in data and data['password']:
                         if not self._validate_password(data['password']):
                             raise BadRequest("Invalid password format or length")
+                    
+                    # Validate config_name (for VPN requests)
+                    if 'config_name' in data:
+                        if not self._validate_config_name(data['config_name']):
+                            raise BadRequest("Invalid configuration name format")
                 
                 return f(*args, **kwargs)
             return decorated_function
@@ -146,6 +151,15 @@ class SecurityManager:
         max_len = current_app.config['PASSWORD_MAX_LENGTH']
         
         return min_len <= len(password) <= max_len
+    
+    def _validate_config_name(self, config_name: str) -> bool:
+        """Validate VPN configuration name format"""
+        if not config_name or not isinstance(config_name, str):
+            return False
+        
+        # Allow alphanumeric, hyphens, underscores, max 50 chars
+        pattern = r'^[a-zA-Z0-9\-_]+$'
+        return bool(re.match(pattern, config_name)) and len(config_name) <= 50
     
     @staticmethod
     def sanitize_ssid(ssid: str) -> Optional[str]:

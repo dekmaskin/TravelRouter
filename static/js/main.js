@@ -700,3 +700,157 @@ function generateQRCode() {
 document.addEventListener('DOMContentLoaded', () => {
     window.portal = new TravelNetPortal();
 });
+
+// VPN Management Functions
+function toggleVPN() {
+    const vpnToggleIcon = document.getElementById('vpnToggleIcon');
+    const vpnToggleText = document.getElementById('vpnToggleText');
+    
+    // Check current VPN status
+    fetch('/api/v1/vpn/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.connected) {
+                    // Disconnect VPN
+                    disconnectVPN();
+                } else {
+                    // Show connect options or redirect to VPN page
+                    if (data.available_configs && data.available_configs.length > 0) {
+                        // Connect to first available config
+                        connectVPN(data.available_configs[0]);
+                    } else {
+                        showNotification('No VPN configurations available. Please upload a configuration first.', 'warning');
+                        // Redirect to VPN page
+                        window.location.href = '/vpn-tunnel';
+                    }
+                }
+            } else {
+                showNotification('Failed to check VPN status', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error checking VPN status:', error);
+            showNotification('Failed to check VPN status', 'error');
+        });
+}
+
+function connectVPN(configName) {
+    if (!configName) return;
+    
+    const vpnToggleIcon = document.getElementById('vpnToggleIcon');
+    const vpnToggleText = document.getElementById('vpnToggleText');
+    
+    // Show loading state
+    if (vpnToggleIcon) {
+        vpnToggleIcon.className = 'fas fa-spinner fa-spin fa-lg mb-1';
+    }
+    if (vpnToggleText) {
+        vpnToggleText.textContent = 'Connecting...';
+    }
+    
+    showNotification('Connecting to VPN...', 'info');
+    
+    fetch('/api/v1/vpn/connect', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            config_name: configName
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            updateVPNStatus(true);
+        } else {
+            showNotification(data.message || 'Failed to connect to VPN', 'error');
+            updateVPNStatus(false);
+        }
+    })
+    .catch(error => {
+        console.error('Error connecting to VPN:', error);
+        showNotification('Failed to connect to VPN', 'error');
+        updateVPNStatus(false);
+    });
+}
+
+function disconnectVPN() {
+    const vpnToggleIcon = document.getElementById('vpnToggleIcon');
+    const vpnToggleText = document.getElementById('vpnToggleText');
+    
+    // Show loading state
+    if (vpnToggleIcon) {
+        vpnToggleIcon.className = 'fas fa-spinner fa-spin fa-lg mb-1';
+    }
+    if (vpnToggleText) {
+        vpnToggleText.textContent = 'Disconnecting...';
+    }
+    
+    showNotification('Disconnecting from VPN...', 'info');
+    
+    fetch('/api/v1/vpn/disconnect', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            updateVPNStatus(false);
+        } else {
+            showNotification(data.message || 'Failed to disconnect from VPN', 'error');
+            updateVPNStatus(true); // Assume still connected if disconnect failed
+        }
+    })
+    .catch(error => {
+        console.error('Error disconnecting from VPN:', error);
+        showNotification('Failed to disconnect from VPN', 'error');
+        updateVPNStatus(true); // Assume still connected if disconnect failed
+    });
+}
+
+function updateVPNStatus(connected) {
+    const vpnToggleIcon = document.getElementById('vpnToggleIcon');
+    const vpnToggleText = document.getElementById('vpnToggleText');
+    const vpnBadge = document.getElementById('vpnBadge');
+    
+    if (vpnToggleIcon) {
+        vpnToggleIcon.className = connected ? 'fas fa-toggle-on fa-lg mb-1' : 'fas fa-toggle-off fa-lg mb-1';
+    }
+    
+    if (vpnToggleText) {
+        vpnToggleText.textContent = connected ? 'VPN On' : 'VPN Off';
+    }
+    
+    if (vpnBadge) {
+        if (connected) {
+            vpnBadge.style.display = 'inline-block';
+        } else {
+            vpnBadge.style.display = 'none';
+        }
+    }
+}
+
+// Check VPN status periodically
+function checkVPNStatus() {
+    fetch('/api/v1/vpn/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateVPNStatus(data.connected);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking VPN status:', error);
+        });
+}
+
+// Check VPN status every 30 seconds
+setInterval(checkVPNStatus, 30000);
+
+// Check VPN status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkVPNStatus();
+});

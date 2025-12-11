@@ -11,6 +11,7 @@ from flask import Blueprint, render_template, request, redirect, current_app
 from app.core.security import security_manager
 from app.services.network_service import NetworkService
 from app.services.system_service import SystemService
+from app.services.vpn_service import VPNService
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,12 @@ def get_system_service():
     if not hasattr(current_app, 'system_service'):
         current_app.system_service = SystemService()
     return current_app.system_service
+
+def get_vpn_service():
+    """Get VPN service instance"""
+    if not hasattr(current_app, 'vpn_service'):
+        current_app.vpn_service = VPNService()
+    return current_app.vpn_service
 
 
 @web_bp.route('/')
@@ -72,11 +79,13 @@ def index():
             networks = get_network_service().scan_wifi_networks()
             connection_status = get_network_service().get_connection_status()
             system_status = get_system_service().get_system_status()
+            vpn_status = get_vpn_service().get_vpn_status()
         except Exception as e:
             logger.error(f"Error getting system info: {e}")
             networks = []
             connection_status = {'connected': False}
             system_status = {'success': True}
+            vpn_status = {'connected': False, 'available_configs': []}
         
         # Get current connection info for highlighting
         current_ssid = None
@@ -88,11 +97,13 @@ def index():
                              networks=[network.to_dict() for network in networks],
                              connection_status=connection_status,
                              system_status=system_status,
+                             vpn_status=vpn_status,
                              current_ssid=current_ssid,
                              features={
                                  'ssh_management': current_app.config['ENABLE_SSH_MANAGEMENT'],
                                  'system_reboot': current_app.config['ENABLE_SYSTEM_REBOOT'],
-                                 'qr_generation': current_app.config['ENABLE_QR_GENERATION']
+                                 'qr_generation': current_app.config['ENABLE_QR_GENERATION'],
+                                 'vpn_tunnel': True
                              })
         
     except Exception as e:
@@ -193,3 +204,18 @@ def scan_networks():
     except Exception as e:
         logger.error(f"Error in scan route: {e}")
         return {'success': False, 'message': 'Scan failed'}, 500
+
+@web_bp.route('/vpn-tunnel')
+@security_manager.rate_limit(max_requests=50)
+def vpn_tunnel_page():
+    """VPN tunnel management page"""
+    try:
+        vpn_status = get_vpn_service().get_vpn_status()
+        return render_template('vpn_tunnel.html', 
+                             app_name=current_app.config['APP_NAME'],
+                             vpn_status=vpn_status)
+    except Exception as e:
+        logger.error(f"Error loading VPN tunnel page: {e}")
+        return render_template('error.html', 
+                             error='VPN Error',
+                             message='Failed to load VPN tunnel page. Please try again.'), 500

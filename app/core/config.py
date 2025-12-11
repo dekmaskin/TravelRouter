@@ -65,6 +65,7 @@ class Config:
     ENABLE_SSH_MANAGEMENT = os.environ.get('ENABLE_SSH_MANAGEMENT', 'true').lower() == 'true'
     ENABLE_SYSTEM_REBOOT = os.environ.get('ENABLE_SYSTEM_REBOOT', 'true').lower() == 'true'
     ENABLE_QR_GENERATION = os.environ.get('ENABLE_QR_GENERATION', 'true').lower() == 'true'
+    ENABLE_VPN_TUNNEL = os.environ.get('ENABLE_VPN_TUNNEL', 'true').lower() == 'true'
     
     # System Commands Whitelist
     ALLOWED_SYSTEM_COMMANDS = {

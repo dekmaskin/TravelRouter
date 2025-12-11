@@ -13,6 +13,11 @@
                     <div class="connection-name" id="connectionName">Checking Connection...</div>
                     <div class="connection-details">
                         <span class="status-badge disconnected" id="connectionBadge">Checking status</span>
+                        {% if vpn_status and vpn_status.connected %}
+                        <span class="status-badge vpn-connected ms-2" id="vpnBadge">
+                            <i class="fas fa-shield-alt me-1"></i>VPN Connected
+                        </span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="connection-signal" id="connectionSignal">
@@ -26,18 +31,31 @@
 <!-- Quick Actions -->
 <div class="quick-actions mb-4">
     <div class="row g-2">
-        <div class="col-6">
+        <div class="col-6 col-md-3">
             <button class="btn btn-primary btn-lg w-100 action-btn" onclick="scanNetworks()">
                 <i class="fas fa-search fa-lg mb-1"></i>
                 <div>Scan WiFi</div>
                 <div class="spinner-border spinner-border-sm loading"></div>
             </button>
         </div>
-        <div class="col-6">
+        <div class="col-6 col-md-3">
             <a href="{{ url_for('web.qr_connect_page') }}" class="btn btn-info btn-lg w-100 action-btn">
                 <i class="fas fa-qrcode fa-lg mb-1"></i>
                 <div>QR Connect</div>
             </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('web.vpn_tunnel_page') }}" class="btn btn-success btn-lg w-100 action-btn">
+                <i class="fas fa-shield-alt fa-lg mb-1"></i>
+                <div>VPN Tunnel</div>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <button class="btn btn-warning btn-lg w-100 action-btn" onclick="toggleVPN()">
+                <i class="fas fa-{{ 'toggle-on' if vpn_status and vpn_status.connected else 'toggle-off' }} fa-lg mb-1" id="vpnToggleIcon"></i>
+                <div id="vpnToggleText">{{ 'VPN On' if vpn_status and vpn_status.connected else 'VPN Off' }}</div>
+                <div class="spinner-border spinner-border-sm loading"></div>
+            </button>
         </div>
     </div>
 </div>

@@ -11,6 +11,7 @@ A professional, secure travel router management application that transforms your
 - **🔐 Security-First Design**: Rate limiting, input validation, secure session management
 - **📱 Mobile-Optimized Interface**: Responsive design that works perfectly on all devices  
 - **🌐 WiFi Bridge Functionality**: Connect to public WiFi and share via your own access point
+- **🛡️ VPN Tunnel Support**: Route traffic through your home VPN server using WireGuard
 - **📊 Real-Time Monitoring**: Live connection status and network diagnostics
 - **🔧 System Management**: Remote reboot, SSH control, and service management
 - **📱 QR Code Generation & Scanning**: Create and scan QR codes for easy WiFi sharing
@@ -80,6 +81,7 @@ travelnet-portal/
 │   ├── services/           # Business logic layer
 │   │   ├── network_service.py  # WiFi operations
 │   │   ├── system_service.py   # System management
+│   │   ├── vpn_service.py      # VPN tunnel management
 │   │   └── qr_service.py       # QR code generation
 │   ├── api/                # RESTful API endpoints
 │   │   └── routes.py       # API v1 routes
@@ -309,6 +311,35 @@ sudo systemctl start hostapd dnsmasq travelnet
 3. Click "Generate QR Code"
 4. Share the QR code with others for easy connection
 
+### VPN Tunnel Management
+
+1. **Setup VPN on Pi**: Deploy VPN functionality to your Raspberry Pi
+   ```bash
+   # Copy VPN setup script to Pi
+   scp setup-vpn.sh johan@10.10.10.60:~/
+   
+   # SSH to Pi and run setup
+   ssh johan@10.10.10.60
+   chmod +x setup-vpn.sh && ./setup-vpn.sh
+   ```
+
+2. **Upload Configuration**: 
+   - Navigate to "VPN Tunnel" page
+   - Click "Upload Config"
+   - Paste your WireGuard configuration
+   - Save with a descriptive name
+
+3. **Connect to VPN**:
+   - Use the VPN toggle on the dashboard for quick connect/disconnect
+   - Or go to VPN management page for detailed control
+   - Monitor connection status and traffic
+
+4. **Benefits**:
+   - Browse as if you're at home
+   - Secure tunnel through public WiFi
+   - Access home network resources
+   - Bypass geographic restrictions
+
 ### System Management
 
 - **SSH Control**: Enable/disable SSH access through WiFi
@@ -317,13 +348,33 @@ sudo systemctl start hostapd dnsmasq travelnet
 
 ## API Endpoints
 
+### Web Interface
 - `GET /` - Main dashboard
-- `POST /connect` - Connect to WiFi network
-- `GET /scan` - Scan for available networks
-- `GET /status` - Get system status
-- `POST /system/<action>` - System actions (reboot, ssh_enable, ssh_disable)
 - `GET /qr-connect` - QR code generation page
-- `POST /generate-qr` - Generate WiFi QR code
+- `GET /vpn-tunnel` - VPN tunnel management page
+
+### Network API (v1)
+- `GET /api/v1/networks/scan` - Scan for available networks
+- `POST /api/v1/networks/connect` - Connect to WiFi network
+- `POST /api/v1/networks/disconnect` - Disconnect from WiFi
+- `GET /api/v1/networks/status` - Get connection status
+
+### VPN API (v1)
+- `GET /api/v1/vpn/status` - Get VPN connection status
+- `POST /api/v1/vpn/connect` - Connect to VPN
+- `POST /api/v1/vpn/disconnect` - Disconnect from VPN
+- `GET /api/v1/vpn/configs` - List VPN configurations
+- `POST /api/v1/vpn/configs` - Upload VPN configuration
+- `DELETE /api/v1/vpn/configs/<name>` - Delete VPN configuration
+
+### System API (v1)
+- `GET /api/v1/system/status` - Get system status
+- `POST /api/v1/system/reboot` - Reboot system
+- `POST /api/v1/system/ssh/<action>` - Manage SSH (enable/disable)
+
+### QR Code API (v1)
+- `POST /api/v1/qr/generate` - Generate WiFi QR code
+- `POST /api/v1/qr/parse` - Parse WiFi QR code
 
 ## Development
 
