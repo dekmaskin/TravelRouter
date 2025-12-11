@@ -3,6 +3,27 @@
 # TravelNet Portal Update Script
 # Updates an existing TravelNet Portal installation
 
+# Function to ensure service is restarted even if update fails
+cleanup_and_restart() {
+    echo ""
+    echo "Ensuring service is restarted..."
+    systemctl daemon-reload
+    systemctl start $SERVICE_NAME || echo "Warning: Failed to start service"
+    
+    # Clean up status file
+    rm -f "$STATUS_FILE" 2>/dev/null || true
+    
+    if systemctl is-active --quiet $SERVICE_NAME; then
+        echo "✓ $SERVICE_NAME service is running"
+    else
+        echo "✗ Warning: $SERVICE_NAME service may not be running properly"
+        echo "  Check logs: journalctl -u $SERVICE_NAME -f"
+    fi
+}
+
+# Set trap to ensure cleanup happens even if script fails
+trap cleanup_and_restart EXIT
+
 set -e
 
 # Configuration
@@ -94,9 +115,10 @@ if [[ "$REPO_URL" == *"YOUR_USERNAME"* ]]; then
     exit 1
 fi
 
-if ! git clone $REPO_URL $TEMP_DIR; then
+if ! git clone $REPO_URL $TEMP_DIR 2>&1; then
     echo "Error: Failed to download latest version from $REPO_URL"
     echo "Please check the repository URL and your internet connection"
+    echo "Attempting to restart service anyway..."
     exit 1
 fi
 
@@ -190,18 +212,7 @@ echo "✓ Permissions set"
 # Start services
 echo ""
 update_status "Starting services..."
-systemctl daemon-reload
-systemctl start $SERVICE_NAME
-
-# Wait a moment for service to start
-sleep 3
-
-if systemctl is-active --quiet $SERVICE_NAME; then
-    echo "✓ $SERVICE_NAME service started successfully"
-else
-    echo "✗ Warning: $SERVICE_NAME service may not have started properly"
-    echo "  Check logs: journalctl -u $SERVICE_NAME -f"
-fi
+# Service restart is handled by the cleanup trap
 
 # Cleanup
 echo ""
@@ -211,6 +222,9 @@ echo "✓ Temporary files cleaned up"
 
 # Mark update as complete
 update_status "Update completed successfully"
+
+# Disable the trap since we're completing successfully
+trap - EXIT
 
 echo ""
 echo "========================================="
@@ -250,5 +264,5 @@ if [[ -f "$APP_DIR/update.sh.new" ]]; then
     echo "✓ Update script updated for future updates"
 fi
 
-# Clean up status file
-rm -f "$STATUS_FILE" 2>/dev/null || true
+# Final cleanup and service restart
+cleanup_and_restart
