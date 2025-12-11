@@ -132,12 +132,12 @@ class SystemSettingsManager {
             console.log('GET test response:', testResponse.status);
             
             if (testResponse.ok) {
-                showAlert('DEBUG: GET request works, trying POST...', 'info');
+                showAlert(`DEBUG: GET works. POST data: ${JSON.stringify(config)}`, 'info');
             } else {
                 showAlert(`DEBUG: GET request failed with ${testResponse.status}`, 'warning');
             }
 
-            console.log('Making hotspot config POST request...');
+            console.log('Making hotspot config POST request with data:', config);
             const response = await fetch('/api/v1/hotspot/config', {
                 method: 'POST',
                 headers: {
