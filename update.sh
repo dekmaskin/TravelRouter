@@ -11,6 +11,13 @@ SERVICE_NAME="travelnet"
 BACKUP_DIR="$APP_DIR/backups/update-$(date +%Y%m%d-%H%M%S)"
 REPO_URL="${REPO_URL:-https://github.com/dekmaskin/TravelRouter}"
 TEMP_DIR="/tmp/travelnet-update"
+STATUS_FILE="/tmp/travelnet_update_status"
+
+# Function to update status
+update_status() {
+    echo "$1" > "$STATUS_FILE"
+    echo "$1"
+}
 
 # Load environment variables if available
 if [[ -f $APP_DIR/.env.production ]]; then
@@ -51,7 +58,7 @@ echo "Service: $SERVICE_NAME"
 echo ""
 
 # Create backup
-echo "Step 1: Creating backup..."
+update_status "Creating backup..."
 mkdir -p "$BACKUP_DIR"
 
 # Backup current application
@@ -72,13 +79,13 @@ echo "✓ Backup created at: $BACKUP_DIR"
 
 # Stop services
 echo ""
-echo "Step 2: Stopping services..."
+update_status "Stopping services..."
 systemctl stop $SERVICE_NAME || echo "  Warning: Could not stop $SERVICE_NAME service"
 echo "✓ Services stopped"
 
 # Download latest version
 echo ""
-echo "Step 3: Downloading latest version..."
+update_status "Downloading latest version..."
 rm -rf $TEMP_DIR
 
 if [[ "$REPO_URL" == *"YOUR_USERNAME"* ]]; then
@@ -97,7 +104,7 @@ echo "✓ Latest version downloaded"
 
 # Update application files
 echo ""
-echo "Step 4: Updating application files..."
+update_status "Updating application files..."
 
 # Update Python application
 echo "  - Updating Python application..."
@@ -128,9 +135,25 @@ chmod +x $APP_DIR/health-check.sh 2>/dev/null || true
 
 echo "✓ Application files updated"
 
+# Update system packages
+echo ""
+update_status "Updating system packages..."
+echo "  - Updating package lists..."
+apt-get update
+
+echo "  - Upgrading system packages..."
+update_status "Installing system package updates..."
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+echo "  - Cleaning up package cache..."
+apt-get autoremove -y
+apt-get autoclean
+
+echo "✓ System packages updated"
+
 # Update Python dependencies
 echo ""
-echo "Step 5: Updating Python dependencies..."
+update_status "Updating Python dependencies..."
 cd $APP_DIR
 
 if [[ -d "venv" ]]; then
@@ -148,14 +171,14 @@ echo "✓ Dependencies updated"
 
 # Set permissions
 echo ""
-echo "Step 6: Setting permissions..."
+update_status "Setting permissions..."
 chown -R johan:johan $APP_DIR 2>/dev/null || chown -R pi:pi $APP_DIR 2>/dev/null || true
 chmod +x $APP_DIR/*.sh 2>/dev/null || true
 echo "✓ Permissions set"
 
 # Start services
 echo ""
-echo "Step 7: Starting services..."
+update_status "Starting services..."
 systemctl daemon-reload
 systemctl start $SERVICE_NAME
 
@@ -171,9 +194,12 @@ fi
 
 # Cleanup
 echo ""
-echo "Step 8: Cleaning up..."
+update_status "Cleaning up..."
 rm -rf $TEMP_DIR
 echo "✓ Temporary files cleaned up"
+
+# Mark update as complete
+update_status "Update completed successfully"
 
 echo ""
 echo "========================================="
@@ -182,6 +208,7 @@ echo "========================================="
 echo ""
 echo "Update Summary:"
 echo "- Backup created: $BACKUP_DIR"
+echo "- System packages updated"
 echo "- Application files updated"
 echo "- Dependencies updated"
 echo "- Services restarted"
@@ -212,3 +239,6 @@ echo "  sudo cp -r $BACKUP_DIR/* $APP_DIR/"
 echo "  sudo systemctl start $SERVICE_NAME"
 echo ""
 echo "Update completed successfully!"
+
+# Clean up status file
+rm -f "$STATUS_FILE" 2>/dev/null || true

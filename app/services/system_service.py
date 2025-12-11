@@ -151,7 +151,12 @@ class SystemService:
                     message='Update script not found'
                 )
             
-            # Run the update script in the background
+            # Create update status file
+            status_file = '/tmp/travelnet_update_status'
+            with open(status_file, 'w') as f:
+                f.write('STARTING\n')
+            
+            # Run the update script in the background with status tracking
             # We don't wait for completion as it may take a while and restart services
             cmd = ['sudo', 'bash', update_script]
             
@@ -177,6 +182,49 @@ class SystemService:
                 success=False,
                 message='Failed to start system update'
             )
+    
+    def get_update_status(self) -> Dict[str, Any]:
+        """
+        Get current update status
+        
+        Returns:
+            Dictionary with update status information
+        """
+        try:
+            import os
+            status_file = '/tmp/travelnet_update_status'
+            
+            # Check if update is running by looking for update processes
+            result = subprocess.run(
+                ['pgrep', '-f', 'update.sh'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            is_running = result.returncode == 0
+            
+            # Try to read status file
+            status_message = 'No update in progress'
+            if os.path.exists(status_file):
+                try:
+                    with open(status_file, 'r') as f:
+                        status_message = f.read().strip()
+                except:
+                    pass
+            
+            return {
+                'success': True,
+                'update_running': is_running,
+                'status': status_message,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting update status: {e}")
+            return {
+                'success': False,
+                'error': 'Failed to get update status',
+                'update_running': False
+            }
     
     def get_system_logs(self, log_type: str = 'application', lines: int = 100) -> Dict[str, Any]:
         """

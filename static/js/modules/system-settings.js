@@ -13,6 +13,8 @@ import { showAlert, showLoading, hideLoading, setLoadingState, formatBytes, form
 
 class SystemSettingsManager {
     constructor() {
+        this.updateInProgress = false;
+        this.updateStatusInterval = null;
         this.init();
     }
 
@@ -39,9 +41,11 @@ class SystemSettingsManager {
             });
         }
 
-        // Auto-refresh system status every 30 seconds
+        // Auto-refresh system status every 30 seconds (but not during updates)
         setInterval(() => {
-            this.refreshSystemStatus();
+            if (!this.updateInProgress) {
+                this.refreshSystemStatus();
+            }
         }, 30000);
     }
 
@@ -321,6 +325,7 @@ class SystemSettingsManager {
         const btn = event.target.closest('button');
         try {
             setLoadingState(btn, true);
+            this.updateInProgress = true;
 
             const response = await fetch('/api/v1/system/update', {
                 method: 'POST'
@@ -329,17 +334,84 @@ class SystemSettingsManager {
             const data = await response.json();
 
             if (data.success) {
-                showAlert('System update initiated. The update will run in the background and may restart services. Please wait a few minutes before checking the system status.', 'info');
-                // Refresh status after a delay to show update progress
-                setTimeout(() => this.refreshSystemStatus(), 10000);
+                showAlert('System update initiated. Monitoring update progress...', 'info');
+                
+                // Start monitoring update progress
+                this.startUpdateStatusMonitoring();
+                
+                // Show update progress in system status
+                this.showUpdateProgress();
             } else {
                 showAlert(data.message || 'Failed to start system update', 'danger');
+                this.updateInProgress = false;
             }
         } catch (error) {
             console.error('Error updating system:', error);
             showAlert('Failed to start system update', 'danger');
+            this.updateInProgress = false;
         } finally {
             setLoadingState(btn, false);
+        }
+    }
+
+    startUpdateStatusMonitoring() {
+        // Clear any existing interval
+        if (this.updateStatusInterval) {
+            clearInterval(this.updateStatusInterval);
+        }
+
+        // Check update status every 5 seconds
+        this.updateStatusInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/v1/system/update/status');
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.update_running) {
+                        this.updateUpdateProgress(data.status || 'Update in progress...');
+                    } else {
+                        // Update completed
+                        this.updateInProgress = false;
+                        clearInterval(this.updateStatusInterval);
+                        this.updateStatusInterval = null;
+                        
+                        showAlert('System update completed! Refreshing system status...', 'success');
+                        
+                        // Wait a moment then refresh status
+                        setTimeout(() => {
+                            this.refreshSystemStatus();
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking update status:', error);
+            }
+        }, 5000);
+    }
+
+    showUpdateProgress() {
+        const container = document.getElementById('systemStatusContent');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div>
+                        <strong>System Update in Progress</strong>
+                        <div id="updateProgressText" class="small text-muted">Initializing update...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    updateUpdateProgress(statusText) {
+        const progressText = document.getElementById('updateProgressText');
+        if (progressText) {
+            progressText.textContent = statusText;
         }
     }
 

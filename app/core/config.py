@@ -64,10 +64,10 @@ class Config:
     MAX_CONNECTION_ATTEMPTS = int(os.environ.get('MAX_CONNECTION_ATTEMPTS', '20'))
     
     # Rate limits by category (requests per minute)
-    RATE_LIMIT_HIGH = int(os.environ.get('RATE_LIMIT_HIGH', '1000'))      # Status checks, frequent polling
-    RATE_LIMIT_NORMAL = int(os.environ.get('RATE_LIMIT_NORMAL', '200'))   # Regular operations, web pages
-    RATE_LIMIT_LOW = int(os.environ.get('RATE_LIMIT_LOW', '50'))          # Network/VPN connections
-    RATE_LIMIT_CRITICAL = int(os.environ.get('RATE_LIMIT_CRITICAL', '5')) # System reboot, critical operations
+    RATE_LIMIT_HIGH = int(os.environ.get('RATE_LIMIT_HIGH', '2000'))      # Status checks, frequent polling
+    RATE_LIMIT_NORMAL = int(os.environ.get('RATE_LIMIT_NORMAL', '500'))   # Regular operations, web pages
+    RATE_LIMIT_LOW = int(os.environ.get('RATE_LIMIT_LOW', '100'))         # Network/VPN connections
+    RATE_LIMIT_CRITICAL = int(os.environ.get('RATE_LIMIT_CRITICAL', '10')) # System reboot, critical operations
     
     # IP blocking settings
     IP_BLOCK_DURATION = int(os.environ.get('IP_BLOCK_DURATION', '30'))  # seconds

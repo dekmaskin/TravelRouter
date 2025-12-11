@@ -175,7 +175,7 @@ def get_connection_status():
 
 
 @api_bp.route('/system/status', methods=['GET'])
-@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_HIGH'])
 def get_system_status():
     """
     Get system status information
@@ -277,6 +277,28 @@ def update_system():
             'success': False,
             'error': 'system_update_error',
             'message': 'System update failed'
+        }), 500
+
+
+@api_bp.route('/system/update/status', methods=['GET'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_HIGH'])
+def get_update_status():
+    """
+    Get current system update status
+    
+    Returns:
+        JSON response with update status
+    """
+    try:
+        status = get_system_service().get_update_status()
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Error getting update status: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'update_status_error',
+            'message': 'Failed to retrieve update status'
         }), 500
 
 
