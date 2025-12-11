@@ -156,18 +156,28 @@ class SystemService:
             with open(status_file, 'w') as f:
                 f.write('STARTING\n')
             
-            # Run the update script in the background with status tracking
-            # Use nohup to ensure the script survives service shutdown
-            cmd = ['nohup', 'sudo', 'bash', update_script]
+            # Create a wrapper script that will run the update independently
+            wrapper_script = '/tmp/run_update.sh'
+            with open(wrapper_script, 'w') as f:
+                f.write(f'''#!/bin/bash
+# Independent update runner
+sleep 2  # Give the web service time to respond
+cd {os.path.dirname(update_script)}
+exec bash {update_script}
+''')
             
-            # Start the process but don't wait for completion
-            # Use a separate session to prevent it from being killed with the service
+            # Make wrapper executable
+            os.chmod(wrapper_script, 0o755)
+            
+            # Use systemd-run to run the update completely independently
+            cmd = ['sudo', 'systemd-run', '--no-block', '--unit=travelnet-update', wrapper_script]
+            
+            # Start the process
             process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                start_new_session=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
             )
             
             logger.info(f"Update process started with PID: {process.pid}")
