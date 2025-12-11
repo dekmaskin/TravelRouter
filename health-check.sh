@@ -3,28 +3,30 @@
 # TravelNet Portal Health Check Script
 # Verify all services are running correctly
 
-PI_HOST="10.10.10.60"
-PI_USER="johan"
+set -e
 
-echo "========================================="
-echo "  TravelNet Portal Health Check"
-echo "========================================="
-echo ""
-
-echo "Checking Raspberry Pi connectivity..."
-if ping -c 1 $PI_HOST > /dev/null 2>&1; then
-    echo "✓ Pi is reachable at $PI_HOST"
-else
-    echo "✗ Cannot reach Pi at $PI_HOST"
-    exit 1
+# Load environment variables if available
+if [[ -f /opt/travelnet/.env.production ]]; then
+    set -a  # automatically export all variables
+    source /opt/travelnet/.env.production 2>/dev/null || true
+    set +a  # stop automatically exporting
 fi
 
+# Default values if not set in environment
+APP_NAME="${APP_NAME:-TravelNet Portal}"
+AP_INTERFACE="${AP_INTERFACE:-wlan0}"
+WIFI_INTERFACE="${WIFI_INTERFACE:-wlan1}"
+
+echo "========================================="
+echo "  $APP_NAME Health Check"
+echo "========================================="
 echo ""
-echo "Checking services status..."
+
+echo "Checking system services..."
 
 # Check TravelNet service
-echo -n "TravelNet Portal: "
-if ssh $PI_USER@$PI_HOST "sudo systemctl is-active travelnet" | grep -q "active"; then
+echo -n "TravelNet Portal Service: "
+if systemctl is-active --quiet travelnet 2>/dev/null; then
     echo "✓ Running"
 else
     echo "✗ Not running"
@@ -32,7 +34,7 @@ fi
 
 # Check hostapd
 echo -n "Access Point (hostapd): "
-if ssh $PI_USER@$PI_HOST "sudo systemctl is-active hostapd" | grep -q "active"; then
+if systemctl is-active --quiet hostapd 2>/dev/null; then
     echo "✓ Running"
 else
     echo "✗ Not running"
@@ -40,15 +42,7 @@ fi
 
 # Check dnsmasq
 echo -n "DHCP Server (dnsmasq): "
-if ssh $PI_USER@$PI_HOST "sudo systemctl is-active dnsmasq" | grep -q "active"; then
-    echo "✓ Running"
-else
-    echo "✗ Not running"
-fi
-
-# Check nginx
-echo -n "Web Server (nginx): "
-if ssh $PI_USER@$PI_HOST "sudo systemctl is-active nginx" | grep -q "active"; then
+if systemctl is-active --quiet dnsmasq 2>/dev/null; then
     echo "✓ Running"
 else
     echo "✗ Not running"
@@ -57,37 +51,47 @@ fi
 echo ""
 echo "Checking network interfaces..."
 
-# Check wlan0 (AP interface)
-echo -n "Access Point Interface (wlan0): "
-if ssh $PI_USER@$PI_HOST "ip addr show wlan0" | grep -q "192.168.4.1"; then
+# Check AP interface
+echo -n "Access Point Interface ($AP_INTERFACE): "
+if ip addr show $AP_INTERFACE 2>/dev/null | grep -q "192.168.4.1"; then
     echo "✓ Configured with IP 192.168.4.1"
 else
     echo "✗ Not properly configured"
 fi
 
-# Check wlan1 (WiFi client interface)
-echo -n "WiFi Client Interface (wlan1): "
-if ssh $PI_USER@$PI_HOST "ip link show wlan1" | grep -q "UP"; then
+# Check WiFi client interface
+echo -n "WiFi Client Interface ($WIFI_INTERFACE): "
+if ip link show $WIFI_INTERFACE 2>/dev/null | grep -q "UP"; then
     echo "✓ Interface is up"
 else
-    echo "✗ Interface is down"
+    echo "✗ Interface is down or not present"
 fi
 
 echo ""
-echo "Testing web portal accessibility..."
+echo "Testing web portal..."
 
 # Test portal response
 echo -n "Portal HTTP Response: "
-if ssh $PI_USER@$PI_HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost" | grep -q "200"; then
+if curl -s -o /dev/null -w '%{http_code}' http://localhost 2>/dev/null | grep -q "200"; then
     echo "✓ Portal responding (HTTP 200)"
 else
     echo "✗ Portal not responding properly"
 fi
 
 echo ""
-echo "Recent log entries:"
+echo "Recent service logs:"
 echo "==================="
-ssh $PI_USER@$PI_HOST "sudo journalctl -u travelnet --no-pager -n 5"
+if systemctl is-active --quiet travelnet 2>/dev/null; then
+    journalctl -u travelnet --no-pager -n 5 2>/dev/null || echo "No logs available"
+else
+    echo "Service not running - no logs to display"
+fi
 
 echo ""
 echo "Health check complete!"
+echo ""
+echo "If any services show as not running, try:"
+echo "  sudo systemctl restart travelnet"
+echo "  sudo systemctl restart hostapd"
+echo "  sudo systemctl restart dnsmasq"
+echo ""

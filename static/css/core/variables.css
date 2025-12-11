@@ -1,0 +1,27 @@
+/* CSS Custom Properties and Root Variables */
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --light-bg: rgba(255, 255, 255, 0.95);
+    --shadow-light: 0 4px 15px rgba(0, 0, 0, 0.1);
+    --shadow-heavy: 0 10px 30px rgba(0, 0, 0, 0.2);
+    
+    /* Signal strength colors */
+    --signal-excellent: var(--success-color);
+    --signal-good: #28a745;
+    --signal-fair: var(--warning-color);
+    --signal-poor: var(--danger-color);
+    
+    /* Spacing */
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 15px;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+}

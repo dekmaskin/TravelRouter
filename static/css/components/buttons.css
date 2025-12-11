@@ -1,0 +1,96 @@
+/* Button Styles and Interactions */
+
+.btn-custom {
+    border-radius: var(--border-radius);
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.btn-custom:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-light);
+}
+
+.connect-btn {
+    background: linear-gradient(45deg, var(--secondary-color), #5dade2);
+    border: none;
+    color: white;
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 50px;
+    transition: all var(--transition-normal);
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.connect-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+/* Action Buttons */
+.action-btn {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    border-radius: 10px;
+    box-shadow: var(--shadow-light);
+    transition: all var(--transition-normal);
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-heavy);
+}
+
+.action-btn .loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.action-btn.loading .loading {
+    display: block;
+}
+
+.action-btn.loading > *:not(.loading) {
+    opacity: 0.3;
+}
+
+/* VPN Toggle Button Styles */
+.btn-warning.action-btn {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+}
+
+.btn-warning.action-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+}
+
+.btn-success.action-btn {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+}
+
+.btn-success.action-btn:hover {
+    background: linear-gradient(135deg, #2ecc71, #58d68d);
+}
+
+/* Loading States */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}

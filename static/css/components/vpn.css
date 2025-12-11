@@ -1,0 +1,96 @@
+/* VPN Specific Styles */
+
+.vpn-status-header {
+    margin-bottom: 1rem;
+}
+
+.vpn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vpn-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.vpn-details {
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.vpn-config-item {
+    border: 1px solid #e9ecef;
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
+    padding: 15px;
+    background: white;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.vpn-config-item:hover {
+    border-color: var(--secondary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.vpn-config-item.connected {
+    border-color: var(--success-color);
+    background-color: rgba(39, 174, 96, 0.05);
+}
+
+.vpn-config-item.expanded {
+    border-color: var(--secondary-color);
+    box-shadow: var(--shadow-light);
+    background: #f8fbff;
+}
+
+.vpn-main {
+    transition: all var(--transition-fast);
+}
+
+.vpn-config-item .expand-indicator {
+    transition: transform var(--transition-normal);
+    color: #6c757d;
+}
+
+.vpn-config-item.expanded .expand-indicator {
+    transform: rotate(180deg);
+}
+
+.vpn-actions {
+    animation: slideDown var(--transition-normal);
+}
+
+.config-name {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.config-details {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.config-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* VPN Connection Animation */
+.vpn-config-item.active::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, var(--success-color), #2ecc71);
+    border-radius: 10px;
+    z-index: -1;
+    animation: vpn-pulse 2s infinite;
+}

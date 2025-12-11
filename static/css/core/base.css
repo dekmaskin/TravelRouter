@@ -1,0 +1,134 @@
+/* Base Styles and Layout */
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.main-container {
+    background: var(--light-bg);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-heavy);
+    backdrop-filter: blur(10px);
+    margin: 20px auto;
+    max-width: 1200px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    color: var(--primary-color) !important;
+}
+
+.mobile-card {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-light);
+    background: var(--light-bg);
+    backdrop-filter: blur(10px);
+}
+
+.mobile-header {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    border: none;
+}
+
+.connection-status-header {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+}
+
+/* Captive Portal Styles */
+.captive-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.captive-card {
+    background: var(--light-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    padding: 40px 30px;
+}
+
+.wifi-icon {
+    font-size: 4rem;
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+    animation: pulse-scale 2s infinite;
+}
+
+.welcome-title {
+    color: var(--primary-color);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.welcome-subtitle {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.features {
+    margin-top: 30px;
+    text-align: left;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    color: #555;
+}
+
+.feature-icon {
+    color: var(--success-color);
+    margin-right: 15px;
+    font-size: 1.2rem;
+    width: 20px;
+}
+
+.network-info {
+    background: rgba(52, 152, 219, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 20px 0;
+    border-left: 4px solid var(--secondary-color);
+}
+
+.auto-redirect {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+/* Footer Styles */
+.footer {
+    background: rgba(255, 255, 255, 0.8);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0 0 var(--border-radius-xl) var(--border-radius-xl);
+    backdrop-filter: blur(5px);
+}
+
+.footer .text-muted {
+    color: #6c757d !important;
+    font-size: 0.875rem;
+}
+
+.footer i {
+    opacity: 0.7;
+}

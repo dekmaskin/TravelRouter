@@ -142,11 +142,20 @@ deploy-*.sh
 deploy-*.ps1
 *-personal.*
 *-private.*
+*-local.*
 
 # Configuration with secrets
 portal-settings.conf
 .env.production
+.env.local
 config-local.py
+secrets.json
+
+# Personal development files
+TODO.md
+NOTES.md
+dev-*
+test-*
 
 # OS specific
 .DS_Store

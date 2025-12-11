@@ -54,6 +54,14 @@ def create_app(config_class=Config):
     from app.core.errors import register_error_handlers
     register_error_handlers(app)
     
+    # Template context processor
+    @app.context_processor
+    def inject_template_vars():
+        """Inject common template variables"""
+        return {
+            'app_version': app.config['APP_VERSION']
+        }
+    
     # Health check endpoint
     @app.route('/health')
     def health_check():

@@ -6,8 +6,8 @@
 # IMPORTANT: This script should be run on the Raspberry Pi, not the development machine
 # 
 # To deploy to your Pi:
-# 1. Copy this script to your Pi: scp setup-vpn.sh johan@10.10.10.60:~/
-# 2. SSH to your Pi: ssh johan@10.10.10.60
+# 1. Copy this script to your Pi: scp setup-vpn.sh pi@YOUR_PI_IP:~/
+# 2. SSH to your Pi: ssh pi@YOUR_PI_IP
 # 3. Run the script: chmod +x setup-vpn.sh && ./setup-vpn.sh
 
 set -e

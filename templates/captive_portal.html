@@ -27,7 +27,7 @@
                 <small class="text-muted">Travel Router Portal</small>
             </div>
             
-            <a href="http://192.168.4.1/" class="connect-btn">
+            <a href="http://{{ config.AP_IP }}/" class="connect-btn">
                 <i class="fas fa-globe"></i> Access Portal
             </a>
             
@@ -73,8 +73,8 @@
             setupAutoRedirect() {
                 // Auto-redirect after 3 seconds if user doesn't click
                 setTimeout(() => {
-                    if (window.location.hostname !== '192.168.4.1') {
-                        window.location.href = 'http://192.168.4.1/';
+                    if (window.location.hostname !== '{{ config.AP_IP }}') {
+                        window.location.href = 'http://{{ config.AP_IP }}/';
                     }
                 }, 3000);
             }
@@ -83,7 +83,7 @@
                 // Handle any clicks to redirect to portal
                 document.addEventListener('click', (e) => {
                     if (e.target.tagName !== 'A') {
-                        window.location.href = 'http://192.168.4.1/';
+                        window.location.href = 'http://{{ config.AP_IP }}/';
                     }
                 });
             }

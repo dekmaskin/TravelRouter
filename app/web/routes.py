@@ -138,7 +138,8 @@ def qr_connect_page():
 def captive_portal_detection():
     """Captive portal detection endpoints - redirect to main portal"""
     logger.info(f"Captive portal detection request from {request.remote_addr} for {request.url}")
-    return redirect('http://192.168.4.1/', code=302)
+    portal_ip = current_app.config.get('AP_IP', '192.168.4.1')
+    return redirect(f'http://{portal_ip}/', code=302)
 
 
 @web_bp.route('/apple-captive-portal')
@@ -162,7 +163,8 @@ def captive_redirect():
     """Handle captive portal redirects with original URL"""
     original_url = request.args.get('url', '')
     logger.info(f"Captive portal redirect request for: {original_url}")
-    return redirect('http://192.168.4.1/', code=302)
+    portal_ip = current_app.config.get('AP_IP', '192.168.4.1')
+    return redirect(f'http://{portal_ip}/', code=302)
 
 
 @web_bp.route('/success.txt')

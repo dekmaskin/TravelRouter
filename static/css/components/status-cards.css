@@ -1,0 +1,121 @@
+/* Status Cards and Connection Display */
+
+.status-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: var(--shadow-light);
+    transition: transform var(--transition-fast);
+}
+
+.status-card:hover {
+    transform: translateY(-2px);
+}
+
+.connection-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.connection-name {
+    font-weight: 600;
+    font-size: 1.1em;
+    color: var(--primary-color);
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.status-badge.connected {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.connecting {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.vpn-connected {
+    background: #d4edda;
+    color: #155724;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+/* Quick Actions */
+.quick-actions .action-btn {
+    position: relative;
+    border-radius: var(--border-radius-lg);
+    padding: 20px 15px;
+    text-align: center;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.quick-actions .action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+.quick-actions .loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.quick-actions .action-btn.loading .loading {
+    display: inline-block;
+}
+
+.quick-actions .action-btn.loading i,
+.quick-actions .action-btn.loading div:not(.loading) {
+    opacity: 0;
+}
+
+/* Info Items */
+.info-item {
+    margin-bottom: 1rem;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+/* Badge Styles */
+.badge.bg-success {
+    background-color: var(--success-color) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}

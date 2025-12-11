@@ -70,7 +70,7 @@ fi
 
 echo "Step 6: Copying application files..."
 cp -r . $APP_DIR/
-chown -R johan:johan $APP_DIR
+chown -R $SYSTEM_USER:$SYSTEM_USER $APP_DIR
 chmod +x $APP_DIR/setup.sh
 
 echo "Step 7: Configuring hostapd (Access Point)..."
@@ -155,7 +155,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=johan
+User=$SYSTEM_USER
 WorkingDirectory=$APP_DIR
 Environment=PATH=$APP_DIR/venv/bin
 ExecStart=$APP_DIR/venv/bin/python app.py
@@ -230,13 +230,46 @@ EOF
 
 chmod +x $APP_DIR/start.sh
 
-echo "Step 18: Creating configuration backup..."
+echo "Step 18: Creating management script..."
+cat > $APP_DIR/manage.sh << 'EOF'
+#!/bin/bash
+# TravelNet management script
+
+case "$1" in
+    start)
+        sudo systemctl start hostapd dnsmasq travelnet nginx
+        echo "TravelNet services started"
+        ;;
+    stop)
+        sudo systemctl stop nginx travelnet dnsmasq hostapd
+        echo "TravelNet services stopped"
+        ;;
+    restart)
+        sudo systemctl restart hostapd dnsmasq travelnet nginx
+        echo "TravelNet services restarted"
+        ;;
+    status)
+        sudo systemctl status hostapd dnsmasq travelnet nginx
+        ;;
+    logs)
+        sudo journalctl -u travelnet -f
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status|logs}"
+        exit 1
+        ;;
+esac
+EOF
+
+chmod +x $APP_DIR/manage.sh
+
+echo "Step 19: Creating configuration backup..."
 mkdir -p $APP_DIR/backups
 cp /etc/hostapd/hostapd.conf $APP_DIR/backups/
 cp /etc/dnsmasq.conf $APP_DIR/backups/
 cp /etc/systemd/system/$SERVICE_NAME.service $APP_DIR/backups/
 
-echo "Step 19: Final system configuration..."
+echo "Step 20: Final system configuration..."
 # Disable WiFi power management
 echo 'wireless-power off' >> /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
 
@@ -266,9 +299,11 @@ echo "3. Open http://$AP_IP in your browser"
 echo "4. Configure your internet connection through the portal"
 echo ""
 echo "Service Management:"
-echo "- Start services: sudo $APP_DIR/start.sh"
-echo "- Check status: sudo systemctl status $SERVICE_NAME"
-echo "- View logs: sudo journalctl -u $SERVICE_NAME -f"
+echo "- Start services: sudo $APP_DIR/manage.sh start"
+echo "- Stop services: sudo $APP_DIR/manage.sh stop"
+echo "- Restart services: sudo $APP_DIR/manage.sh restart"
+echo "- Check status: sudo $APP_DIR/manage.sh status"
+echo "- View logs: sudo $APP_DIR/manage.sh logs"
 echo ""
 echo "Security Notes:"
 echo "- Change the default AP password in /etc/hostapd/hostapd.conf"

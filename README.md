@@ -1,4 +1,4 @@
-# TravelNet Portal
+# TravelRouter
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -27,15 +27,15 @@ A professional, secure travel router management application that transforms your
 
 ### One-Command Installation
 ```bash
-# Download and run the secure setup script
-curl -sSL https://raw.githubusercontent.com/your-repo/travelnet-portal/main/setup-secure.sh | sudo bash
+# Download and run the installer
+curl -sSL https://raw.githubusercontent.com/dekmaskin/TravelRouter/main/install.sh | sudo bash
 ```
 
 ### Manual Installation
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-repo/travelnet-portal.git
-   cd travelnet-portal
+   git clone https://github.com/USERNAME/REPOSITORY.git
+   cd REPOSITORY
    ```
 
 2. **Run the secure setup:**
@@ -45,9 +45,11 @@ curl -sSL https://raw.githubusercontent.com/your-repo/travelnet-portal/main/setu
    ```
 
 3. **Access your portal:**
-   - Connect to the `TravelNet-Portal` WiFi network
+   - Connect to your WiFi network (name set during installation)
    - Open `http://192.168.4.1` in your browser
    - Configure your internet connection
+
+📖 **Detailed Setup Guide**: See [SETUP.md](SETUP.md) for complete installation instructions.
 
 ## 📱 QR Code Features
 
@@ -94,8 +96,6 @@ travelnet-portal/
 ├── logs/                   # Application logs
 ├── setup-secure.sh         # Production setup script
 ├── requirements.txt        # Python dependencies
-├── Dockerfile             # Container deployment
-├── docker-compose.yml     # Container orchestration
 ├── SECURITY.md            # Security documentation
 └── DEPLOYMENT.md          # Deployment guide
 ```
@@ -108,7 +108,6 @@ travelnet-portal/
 - **🛡️ Error Handling**: Comprehensive error handling and structured logging
 - **🧪 Testability**: Modular design enables easy unit testing
 - **📈 Scalability**: Blueprint-based architecture for easy extension
-- **🐳 Containerization**: Docker support for consistent deployments
 
 ## Quick Start
 
@@ -129,10 +128,10 @@ travelnet-portal/
 2. **Deploy to Raspberry Pi:**
    ```bash
    # Copy files to Pi
-   scp -r . pi@10.10.10.60:/home/pi/travelnet-portal/
+   scp -r . pi@YOUR_PI_IP:/home/pi/travelnet-portal/
    
    # SSH into Pi
-   ssh pi@10.10.10.60
+   ssh pi@YOUR_PI_IP
    
    # Navigate to project directory
    cd /home/pi/travelnet-portal
@@ -275,10 +274,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=johan
-WorkingDirectory=/home/johan/travelnet-portal
-Environment=PATH=/home/johan/travelnet-portal/venv/bin
-ExecStart=/home/johan/travelnet-portal/venv/bin/python app.py
+User=pi
+WorkingDirectory=/home/pi/travelnet-portal
+Environment=PATH=/home/pi/travelnet-portal/venv/bin
+ExecStart=/home/pi/travelnet-portal/venv/bin/python app.py
 Restart=always
 RestartSec=10
 
@@ -316,10 +315,10 @@ sudo systemctl start hostapd dnsmasq travelnet
 1. **Setup VPN on Pi**: Deploy VPN functionality to your Raspberry Pi
    ```bash
    # Copy VPN setup script to Pi
-   scp setup-vpn.sh johan@10.10.10.60:~/
+   scp setup-vpn.sh pi@YOUR_PI_IP:~/
    
    # SSH to Pi and run setup
-   ssh johan@10.10.10.60
+   ssh pi@YOUR_PI_IP
    chmod +x setup-vpn.sh && ./setup-vpn.sh
    ```
 

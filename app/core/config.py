@@ -17,7 +17,19 @@ class Config:
     
     # Application Settings
     APP_NAME = os.environ.get('APP_NAME', 'TravelNet Portal')
-    APP_VERSION = "2.0.0"
+    
+    @classmethod
+    def _get_version(cls):
+        """Get version from VERSION file"""
+        try:
+            version_file = Path(__file__).parent.parent.parent / 'VERSION'
+            if version_file.exists():
+                return version_file.read_text().strip()
+        except Exception:
+            pass
+        return "1.0.0"  # fallback version
+    
+    APP_VERSION = _get_version()
     
     # Security Configuration
     SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
@@ -60,6 +72,7 @@ class Config:
     # Default Network Settings
     DEFAULT_AP_SSID = os.environ.get('DEFAULT_AP_SSID', 'TravelNet-Portal')
     DEFAULT_AP_PASSWORD = os.environ.get('DEFAULT_AP_PASSWORD', 'TravelNet2026!')
+    AP_IP = os.environ.get('AP_IP', '192.168.4.1')
     
     # Feature Flags
     ENABLE_SSH_MANAGEMENT = os.environ.get('ENABLE_SSH_MANAGEMENT', 'true').lower() == 'true'

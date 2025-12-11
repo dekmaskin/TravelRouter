@@ -43,17 +43,10 @@
 <!-- VPN Quick Actions -->
 <div class="vpn-actions mb-4">
     <div class="row g-2">
-        <div class="col-6">
-            <button class="btn btn-success btn-lg w-100 action-btn" onclick="showConnectModal()" {{ 'disabled' if not vpn_status.available_configs }}>
-                <i class="fas fa-play fa-lg mb-1"></i>
-                <div>Connect VPN</div>
-                <div class="spinner-border spinner-border-sm loading"></div>
-            </button>
-        </div>
-        <div class="col-6">
+        <div class="col-12">
             <button class="btn btn-primary btn-lg w-100 action-btn" onclick="showUploadModal()">
                 <i class="fas fa-upload fa-lg mb-1"></i>
-                <div>Upload Config</div>
+                <div>Upload New Config</div>
             </button>
         </div>
     </div>
@@ -73,29 +66,25 @@
         <div id="vpnConfigsList">
             {% if vpn_status.available_configs %}
                 {% for config in vpn_status.available_configs %}
-                <div class="vpn-config-item {{ 'active' if vpn_status.connected and vpn_status.current_connection and vpn_status.current_connection.config_name == config else '' }}" 
-                     data-config="{{ config }}">
-                    <div class="d-flex justify-content-between align-items-center">
+                <div class="vpn-config-item {{ 'connected' if vpn_status.connected and vpn_status.current_connection and vpn_status.current_connection.config_name == config else '' }}" 
+                     data-config="{{ config }}"
+
+                    <div class="vpn-main d-flex justify-content-between align-items-center">
                         <div class="flex-grow-1">
                             <div class="config-name">
                                 {{ config }}
                                 {% if vpn_status.connected and vpn_status.current_connection and vpn_status.current_connection.config_name == config %}
-                                <span class="badge bg-success ms-2">Active</span>
+                                <span class="badge bg-success ms-2">Connected</span>
                                 {% endif %}
                             </div>
-                            <div class="config-details text-muted">
-                                WireGuard Configuration
+                            <div class="config-details">
+                                <i class="fas fa-shield-alt me-1"></i>WireGuard Configuration
                             </div>
                         </div>
-                        <div class="config-actions">
-                            {% if not (vpn_status.connected and vpn_status.current_connection and vpn_status.current_connection.config_name == config) %}
-                            <button class="btn btn-outline-success btn-sm me-2" onclick="connectVPN('{{ config }}')">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            {% endif %}
-                            <button class="btn btn-outline-danger btn-sm" onclick="deleteConfig('{{ config }}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="expand-indicator">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -174,36 +163,7 @@
     </div>
 </div>
 
-<!-- Connect VPN Modal -->
-<div class="modal fade" id="connectVPNModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Connect to VPN</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModal('connectVPNModal')"></button>
-            </div>
-            <div class="modal-body">
-                <form id="connectVPNForm">
-                    <div class="mb-3">
-                        <label for="configSelect" class="form-label">Select Configuration</label>
-                        <select class="form-select" id="configSelect" required>
-                            <option value="">Choose a configuration...</option>
-                            {% for config in vpn_status.available_configs %}
-                            <option value="{{ config }}">{{ config }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeModal('connectVPNModal')">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="connectSelectedVPN()">
-                    <i class="fas fa-play me-1"></i>Connect
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Upload Config Modal -->
 <div class="modal fade" id="uploadConfigModal" tabindex="-1">
@@ -287,25 +247,7 @@ function updateVPNDisplay() {
     }, 1000);
 }
 
-function showConnectModal() {
-    // Ensure Bootstrap is loaded
-    if (typeof bootstrap !== 'undefined') {
-        const modal = new bootstrap.Modal(document.getElementById('connectVPNModal'));
-        modal.show();
-    } else {
-        // Fallback for mobile - show modal manually
-        const modal = document.getElementById('connectVPNModal');
-        modal.style.display = 'block';
-        modal.classList.add('show');
-        document.body.classList.add('modal-open');
-        
-        // Add backdrop
-        const backdrop = document.createElement('div');
-        backdrop.className = 'modal-backdrop fade show';
-        backdrop.id = 'modal-backdrop';
-        document.body.appendChild(backdrop);
-    }
-}
+
 
 function showUploadModal() {
     // Ensure Bootstrap is loaded
@@ -356,20 +298,7 @@ function connectVPN(configName) {
     });
 }
 
-function connectSelectedVPN() {
-    const configSelect = document.getElementById('configSelect');
-    const configName = configSelect.value;
-    
-    if (!configName) {
-        showNotification('Please select a configuration', 'warning');
-        return;
-    }
-    
-    // Close modal
-    closeModal('connectVPNModal');
-    
-    connectVPN(configName);
-}
+
 
 function closeModal(modalId) {
     if (typeof bootstrap !== 'undefined') {
@@ -484,6 +413,88 @@ function deleteConfig(configName) {
         console.error('Error deleting config:', error);
         showNotification('Failed to delete configuration', 'error');
     });
+}
+
+// VPN expansion handling for this page
+document.addEventListener('click', (e) => {
+    // Handle VPN config item expansion
+    const vpnItem = e.target.closest('.vpn-config-item');
+    if (vpnItem && !e.target.closest('.vpn-actions') && !e.target.closest('button')) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleVPNExpansion(vpnItem);
+    }
+    
+    // Handle connect button clicks
+    if (e.target.closest('.connect-vpn-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const button = e.target.closest('.connect-vpn-btn');
+        connectVPNInline(button);
+    }
+});
+
+function toggleVPNExpansion(vpnItem) {
+    const config = vpnItem.dataset.config;
+    const isConnected = vpnItem.classList.contains('connected');
+    
+    // Close any other expanded items
+    document.querySelectorAll('.vpn-config-item.expanded').forEach(item => {
+        if (item !== vpnItem) {
+            item.classList.remove('expanded');
+            const actions = item.querySelector('.vpn-actions');
+            if (actions) actions.remove();
+        }
+    });
+    
+    // Toggle current item
+    if (vpnItem.classList.contains('expanded')) {
+        vpnItem.classList.remove('expanded');
+        const actions = vpnItem.querySelector('.vpn-actions');
+        if (actions) actions.remove();
+    } else {
+        vpnItem.classList.add('expanded');
+        addVPNActions(vpnItem, config, isConnected);
+    }
+}
+
+function addVPNActions(vpnItem, config, isConnected) {
+    const actionsHtml = `
+        <div class="vpn-actions mt-3 pt-3 border-top">
+            <div class="d-flex gap-2">
+                ${!isConnected ? `
+                    <button class="btn btn-success btn-sm connect-vpn-btn flex-grow-1" data-config="${config}">
+                        <i class="fas fa-play me-1"></i>Connect
+                    </button>
+                ` : `
+                    <button class="btn btn-outline-danger btn-sm disconnect-vpn-btn flex-grow-1" onclick="disconnectVPN()">
+                        <i class="fas fa-stop me-1"></i>Disconnect
+                    </button>
+                `}
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteConfig('${config}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    vpnItem.insertAdjacentHTML('beforeend', actionsHtml);
+}
+
+function connectVPNInline(button) {
+    const config = button.dataset.config;
+    const originalText = button.innerHTML;
+    
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connecting...';
+    button.disabled = true;
+    
+    connectVPN(config);
+    
+    // Reset button after a delay (will be updated by refresh anyway)
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }, 3000);
 }
 
 // Auto-refresh VPN status every 30 seconds
