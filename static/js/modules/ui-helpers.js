@@ -108,7 +108,7 @@ class UIHelpers {
 }
 
 // Export individual functions for convenience
-export const showAlert = (type, message) => UIHelpers.showAlert(message, type);
+export const showAlert = (message, type) => UIHelpers.showAlert(message, type);
 export const showLoading = (message, element) => UIHelpers.showLoading(message, element);
 export const hideLoading = (element) => UIHelpers.hideLoading(element);
 export const setLoadingState = (element, isLoading, originalText) => UIHelpers.setLoadingState(element, isLoading, originalText);
