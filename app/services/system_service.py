@@ -267,6 +267,79 @@ exec bash {update_script}
             logger.warning(f"Internet connectivity check failed: {e}")
             return False
     
+    def _get_network_interfaces(self) -> Dict[str, Any]:
+        """
+        Get IP addresses of network interfaces
+        
+        Returns:
+            Dictionary with interface IP information
+        """
+        interfaces = {}
+        
+        try:
+            # Get interface information using ip command
+            result = subprocess.run(
+                ['ip', '-4', 'addr', 'show'],
+                capture_output=True, text=True, timeout=10
+            )
+            
+            if result.returncode == 0:
+                current_interface = None
+                
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+                    
+                    # Look for interface names
+                    if line and not line.startswith(' '):
+                        parts = line.split(':')
+                        if len(parts) >= 2:
+                            interface_name = parts[1].strip()
+                            current_interface = interface_name
+                    
+                    # Look for inet addresses
+                    elif line.startswith('inet ') and current_interface:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            ip_with_mask = parts[1]
+                            ip_address = ip_with_mask.split('/')[0]
+                            
+                            # Skip loopback
+                            if ip_address != '127.0.0.1':
+                                interfaces[current_interface] = ip_address
+            
+            # Get specific interfaces we care about
+            hotspot_ip = interfaces.get('wlan0', None)  # Hotspot interface
+            ethernet_ip = interfaces.get('eth0', None)  # Ethernet interface
+            wifi_client_ip = interfaces.get('wlan1', None)  # WiFi client interface
+            
+            return {
+                'hotspot': {
+                    'interface': 'wlan0',
+                    'ip': hotspot_ip,
+                    'name': 'Hotspot WiFi'
+                },
+                'ethernet': {
+                    'interface': 'eth0', 
+                    'ip': ethernet_ip,
+                    'name': 'Ethernet'
+                },
+                'wifi_client': {
+                    'interface': 'wlan1',
+                    'ip': wifi_client_ip,
+                    'name': 'WiFi Client'
+                },
+                'all_interfaces': interfaces
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting network interfaces: {e}")
+            return {
+                'hotspot': {'interface': 'wlan0', 'ip': None, 'name': 'Hotspot WiFi'},
+                'ethernet': {'interface': 'eth0', 'ip': None, 'name': 'Ethernet'},
+                'wifi_client': {'interface': 'wlan1', 'ip': None, 'name': 'WiFi Client'},
+                'all_interfaces': {}
+            }
+    
     def get_system_logs(self, log_type: str = 'application', lines: int = 100) -> Dict[str, Any]:
         """
         Get system logs
@@ -413,13 +486,17 @@ exec bash {update_script}
             # Check internet connectivity
             internet_connected = self._check_internet_connectivity()
             
+            # Get network interface IP addresses
+            network_interfaces = self._get_network_interfaces()
+            
             # Add system information
             status['system'].update({
                 'reboot_enabled': current_app.config['ENABLE_SYSTEM_REBOOT'],
                 'update_enabled': current_app.config['ENABLE_SYSTEM_UPDATE'],
                 'qr_generation_enabled': current_app.config['ENABLE_QR_GENERATION'],
                 'vpn_tunnel_enabled': current_app.config['ENABLE_VPN_TUNNEL'],
-                'internet_connected': internet_connected
+                'internet_connected': internet_connected,
+                'network_interfaces': network_interfaces
             })
             
             return status

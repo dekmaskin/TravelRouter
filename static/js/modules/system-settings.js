@@ -296,6 +296,55 @@ class SystemSettingsManager {
             '<span class="badge bg-success">Connected</span>' : 
             '<span class="badge bg-danger">Offline</span>';
 
+        // Build network interfaces section
+        const interfaces = system.network_interfaces || {};
+        let networkInterfacesSection = '';
+        
+        if (interfaces.hotspot?.ip || interfaces.ethernet?.ip || interfaces.wifi_client?.ip) {
+            const interfaceItems = [];
+            
+            if (interfaces.hotspot?.ip) {
+                interfaceItems.push(`
+                    <div class="col-md-6">
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-wifi me-2"></i>Hotspot IP</span>
+                                <span class="text-muted font-monospace">${interfaces.hotspot.ip}</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            if (interfaces.ethernet?.ip) {
+                interfaceItems.push(`
+                    <div class="col-md-6">
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-ethernet me-2"></i>Ethernet IP</span>
+                                <span class="text-muted font-monospace">${interfaces.ethernet.ip}</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            if (interfaces.wifi_client?.ip) {
+                interfaceItems.push(`
+                    <div class="col-md-6">
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-signal me-2"></i>WiFi Client IP</span>
+                                <span class="text-muted font-monospace">${interfaces.wifi_client.ip}</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            networkInterfacesSection = interfaceItems.join('');
+        }
+
         container.innerHTML = `
             <div class="row g-3">
                 ${updateSection}
@@ -346,6 +395,7 @@ class SystemSettingsManager {
                         </div>
                     </div>
                 </div>
+                ${networkInterfacesSection}
             </div>
             <div class="mt-3 text-muted small">
                 <i class="fas fa-info-circle me-1"></i>

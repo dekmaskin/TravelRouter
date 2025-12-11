@@ -25,8 +25,40 @@ class NetworkManager {
             if (data.success) {
                 this.updateConnectionUI(data);
             }
+            
+            // Also update system status for IP addresses
+            await this.updateSystemStatus();
         } catch (error) {
             console.error('Error updating connection status:', error);
+        }
+    }
+
+    async updateSystemStatus() {
+        try {
+            const data = await ApiClient.get('/api/v1/system/status');
+            
+            if (data.success && data.system && data.system.network_interfaces) {
+                this.updateIPAddresses(data.system.network_interfaces);
+            }
+        } catch (error) {
+            console.error('Error updating system status:', error);
+        }
+    }
+
+    updateIPAddresses(interfaces) {
+        const hotspotIpElement = document.getElementById('hotspotIp');
+        const ethernetIpElement = document.getElementById('ethernetIp');
+        
+        if (hotspotIpElement) {
+            const hotspotIp = interfaces.hotspot?.ip || 'Not Available';
+            hotspotIpElement.textContent = hotspotIp;
+            hotspotIpElement.className = hotspotIp !== 'Not Available' ? 'text-success mb-0 font-monospace' : 'text-muted mb-0';
+        }
+        
+        if (ethernetIpElement) {
+            const ethernetIp = interfaces.ethernet?.ip || 'Not Connected';
+            ethernetIpElement.textContent = ethernetIp;
+            ethernetIpElement.className = ethernetIp !== 'Not Connected' ? 'text-success mb-0 font-monospace' : 'text-muted mb-0';
         }
     }
 
