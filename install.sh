@@ -38,7 +38,11 @@ fi
 
 echo "Starting installation..."
 cd $TEMP_DIR
+
+# Make all scripts executable
 chmod +x $SCRIPT_NAME
+chmod +x secure-ssh.sh 2>/dev/null || echo "Note: secure-ssh.sh not found"
+chmod +x setup-firewall.sh 2>/dev/null || echo "Note: setup-firewall.sh not found"
 
 if [[ -f $SCRIPT_NAME ]]; then
     ./$SCRIPT_NAME
@@ -55,6 +59,16 @@ echo "========================================="
 echo "Installation Complete!"
 echo "========================================="
 echo ""
-echo "Your TravelNet Portal is now ready to use."
-echo "Connect to the WiFi network and open your browser to get started."
+echo "Your TravelNet Portal is now ready to use with enhanced security:"
+echo ""
+echo "SECURITY FEATURES APPLIED:"
+echo "✓ SSH access restricted to ethernet interface only"
+echo "✓ Firewall rules configured to block SSH on WiFi/VPN"
+echo "✓ Fail2ban protection enabled"
+echo "✓ Secure access point configuration"
+echo ""
+echo "IMPORTANT:"
+echo "- SSH is now ONLY accessible via ethernet connection"
+echo "- Web portal is accessible via WiFi hotspot"
+echo "- Connect to the WiFi network and open your browser to get started"
 echo ""

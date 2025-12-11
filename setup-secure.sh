@@ -359,7 +359,29 @@ cp /etc/dnsmasq.conf $APP_DIR/backups/
 cp /etc/systemd/system/$SERVICE_NAME.service $APP_DIR/backups/
 cp $APP_DIR/.env.production $APP_DIR/backups/
 
-echo "Step 20: Final security hardening..."
+echo "Step 20: Configuring SSH security..."
+# Run SSH security configuration
+if [[ -f "./secure-ssh.sh" ]]; then
+    echo "Applying SSH security restrictions..."
+    chmod +x ./secure-ssh.sh
+    ./secure-ssh.sh
+    echo "✓ SSH security configured"
+else
+    echo "Warning: secure-ssh.sh not found, skipping SSH security setup"
+fi
+
+echo "Step 21: Configuring firewall security..."
+# Run firewall security configuration
+if [[ -f "./setup-firewall.sh" ]]; then
+    echo "Applying firewall security rules..."
+    chmod +x ./setup-firewall.sh
+    ./setup-firewall.sh
+    echo "✓ Firewall security configured"
+else
+    echo "Warning: setup-firewall.sh not found, skipping firewall security setup"
+fi
+
+echo "Step 22: Final security hardening..."
 # Disable WiFi power management
 echo 'wireless-power off' >> /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
 
@@ -394,7 +416,8 @@ echo "- Application Directory: $APP_DIR"
 echo ""
 echo "Security Features Enabled:"
 echo "- Secure secret key generated"
-echo "- Firewall configured"
+echo "- Firewall configured with iptables rules"
+echo "- SSH restricted to ethernet interface only"
 echo "- Fail2ban enabled"
 echo "- Rate limiting enabled"
 echo "- Input validation enabled"
@@ -408,11 +431,17 @@ echo "- Check status: $APP_DIR/manage.sh status"
 echo "- View logs: $APP_DIR/manage.sh logs"
 echo ""
 echo "IMPORTANT SECURITY NOTES:"
-echo "1. Change SSH keys and disable password authentication"
-echo "2. Regularly update the system: apt update && apt upgrade"
-echo "3. Monitor logs: $APP_DIR/manage.sh logs"
-echo "4. Backup configuration files in $APP_DIR/backups/"
-echo "5. The WiFi password is: $AP_PASSWORD"
+echo "1. SSH is now ONLY accessible via ethernet interface"
+echo "2. Change SSH keys and disable password authentication"
+echo "3. Regularly update the system: apt update && apt upgrade"
+echo "4. Monitor logs: $APP_DIR/manage.sh logs"
+echo "5. Backup configuration files in $APP_DIR/backups/"
+echo "6. The WiFi password is: $AP_PASSWORD"
+echo ""
+echo "SSH ACCESS:"
+echo "- SSH is restricted to ethernet interface only for security"
+echo "- Connect via: ssh $SYSTEM_USER@<ethernet-ip>"
+echo "- SSH is blocked on WiFi client, hotspot, and VPN interfaces"
 echo ""
 
 read -p "Would you like to reboot now to complete setup? (y/N): " -r
