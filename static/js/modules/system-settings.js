@@ -126,6 +126,18 @@ class SystemSettingsManager {
         setLoadingState(submitBtn, true);
 
         try {
+            // First test if we can reach the GET endpoint
+            console.log('Testing GET request first...');
+            const testResponse = await fetch('/api/v1/hotspot/config');
+            console.log('GET test response:', testResponse.status);
+            
+            if (testResponse.ok) {
+                showAlert('DEBUG: GET request works, trying POST...', 'info');
+            } else {
+                showAlert(`DEBUG: GET request failed with ${testResponse.status}`, 'warning');
+            }
+
+            console.log('Making hotspot config POST request...');
             const response = await fetch('/api/v1/hotspot/config', {
                 method: 'POST',
                 headers: {
@@ -133,26 +145,24 @@ class SystemSettingsManager {
                 },
                 body: JSON.stringify(config)
             });
+            console.log('POST Response received:', response.status);
 
-            const responseText = await response.text();
-            showAlert(`DEBUG: Status=${response.status}, Response="${responseText.substring(0, 200)}"`, 'info');
-
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (jsonError) {
-                showAlert('DEBUG: Response is not valid JSON', 'warning');
-                return;
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+            
+            const data = await response.json();
+            console.log('Response data:', data);
 
-            if (data && data.success) {
+            if (data.success) {
                 showAlert('Hotspot configuration updated successfully', 'success');
                 setTimeout(() => this.refreshSystemStatus(), 2000);
             } else {
-                showAlert(`DEBUG: API returned success=${data.success}, message="${data.message}"`, 'danger');
+                showAlert('Failed to update hotspot configuration: ' + (data.message || 'Unknown error'), 'danger');
             }
         } catch (error) {
-            showAlert(`DEBUG: Network error - ${error.message}`, 'danger');
+            console.error('Error updating hotspot config:', error);
+            showAlert('DEBUG: Error details - ' + error.message, 'danger');
         }
         
         setLoadingState(submitBtn, false);
