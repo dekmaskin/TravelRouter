@@ -260,7 +260,7 @@ sudo iptables -t nat -A POSTROUTING -o wlan1 -j MASQUERADE
 sudo iptables -A FORWARD -i wlan1 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i wlan0 -o wlan1 -j ACCEPT
 sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80
-sudo netfilter-persistent save
+# UFW is used for firewall management instead of iptables-persistent
 ```
 
 ### 8. Systemd Service

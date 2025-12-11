@@ -57,19 +57,30 @@ echo "Step 1: Updating system packages..."
 apt update && apt upgrade -y
 
 echo "Step 2: Installing required packages..."
+# Remove conflicting packages first
+apt remove -y iptables-persistent netfilter-persistent 2>/dev/null || true
+
 apt install -y \
     hostapd \
     dnsmasq \
-    iptables-persistent \
     python3 \
     python3-pip \
     python3-venv \
+    python3-dev \
     git \
     nginx \
     ufw \
     network-manager \
     rfkill \
-    fail2ban
+    fail2ban \
+    libjpeg-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    libwebp-dev \
+    build-essential
 
 echo "Step 3: Creating application directory..."
 mkdir -p $APP_DIR
@@ -230,8 +241,15 @@ iptables -A FORWARD -i $AP_INTERFACE -o $WIFI_INTERFACE -j ACCEPT
 iptables -t nat -A PREROUTING -i $AP_INTERFACE -p tcp --dport 80 -j DNAT --to-destination $AP_IP:80
 iptables -t nat -A PREROUTING -i $AP_INTERFACE -p tcp --dport 443 -j DNAT --to-destination $AP_IP:80
 
-# Save iptables rules
-netfilter-persistent save
+# Configure UFW firewall
+ufw --force reset
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow ssh
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow 53
+ufw --force enable
 
 echo "Step 13: Creating systemd service..."
 cat > /etc/systemd/system/$SERVICE_NAME.service << EOF

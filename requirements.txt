@@ -9,7 +9,7 @@ blinker==1.6.3
 
 # QR Code generation
 qrcode[pil]==7.4.2
-Pillow==10.0.1
+Pillow>=10.0.0
 
 # Development and testing (optional)
 pytest==7.4.3
