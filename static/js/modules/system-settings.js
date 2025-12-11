@@ -134,10 +134,6 @@ class SystemSettingsManager {
                 body: JSON.stringify(config)
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
             const data = await response.json();
 
             if (data.success) {
@@ -148,7 +144,7 @@ class SystemSettingsManager {
             }
         } catch (error) {
             console.error('Error updating hotspot config:', error);
-            showAlert('Failed to update hotspot configuration: ' + error.message, 'danger');
+            showAlert('Network error or invalid response', 'danger');
         }
         
         setLoadingState(submitBtn, false);
