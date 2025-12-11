@@ -18,7 +18,7 @@
                             </span>
                         </div>
                         <div>
-                            <span class="status-badge vpn-connected" id="vpnBadge" style="display: {% if vpn_status and vpn_status.connected %}inline-block{% else %}none{% endif %};">
+                            <span class="status-badge vpn-connected{% if not (vpn_status and vpn_status.connected) %} d-none{% endif %}" id="vpnBadge">
                                 <i class="fas fa-shield-alt me-1"></i>VPN Connected
                             </span>
                         </div>
@@ -55,11 +55,10 @@
             </a>
         </div>
         <div class="col-6 col-md-3">
-            <button class="btn btn-warning btn-lg w-100 action-btn" onclick="toggleVPN()">
-                <i class="fas fa-{{ 'toggle-on' if vpn_status and vpn_status.connected else 'toggle-off' }} fa-lg mb-1" id="vpnToggleIcon"></i>
-                <div id="vpnToggleText">{{ 'VPN On' if vpn_status and vpn_status.connected else 'VPN Off' }}</div>
-                <div class="spinner-border spinner-border-sm loading"></div>
-            </button>
+            <a href="{{ url_for('web.system_settings_page') }}" class="btn btn-secondary btn-lg w-100 action-btn">
+                <i class="fas fa-cog fa-lg mb-1"></i>
+                <div>Settings</div>
+            </a>
         </div>
     </div>
 </div>

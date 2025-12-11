@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="system-settings-page">
+    <!-- System Settings Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-cog me-2"></i>System Settings</h4>
+        <a href="{{ url_for('web.index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+
+<!-- Hotspot Configuration -->
+<div class="card mobile-card mb-4">
+    <div class="card-header mobile-header">
+        <h6 class="mb-0"><i class="fas fa-wifi me-2"></i>Hotspot Configuration</h6>
+    </div>
+    <div class="card-body">
+        <form id="hotspotForm" class="system-settings-form">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="hotspotSSID" class="form-label">Hotspot SSID</label>
+                    <input type="text" class="form-control" id="hotspotSSID" name="ssid" 
+                           placeholder="Enter hotspot name" maxlength="32" required>
+                    <div class="form-text">Network name visible to devices (1-32 characters)</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="hotspotPassword" class="form-label">Hotspot Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="hotspotPassword" name="password" 
+                               placeholder="Enter password" minlength="8" maxlength="63">
+                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">Leave empty for open network (8-63 characters for WPA)</div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="hotspotVisible" name="visible" checked>
+                        <label class="form-check-label" for="hotspotVisible">
+                            Hotspot Visibility
+                        </label>
+                    </div>
+                    <div class="form-text">Make hotspot visible to nearby devices</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="hotspotEnabled" name="enabled" checked>
+                        <label class="form-check-label" for="hotspotEnabled">
+                            Enable Hotspot
+                        </label>
+                    </div>
+                    <div class="form-text">Turn hotspot on/off (SSH via ethernet remains available)</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary system-action-btn">
+                    <i class="fas fa-save me-1"></i>Save Hotspot Settings
+                    <div class="spinner-border spinner-border-sm loading ms-2"></div>
+                </button>
+                <button type="button" class="btn btn-outline-secondary system-action-btn" onclick="loadCurrentHotspotSettings()">
+                    <i class="fas fa-sync-alt me-1"></i>Reload Current Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Network Management -->
+<div class="card mobile-card mb-4">
+    <div class="card-header mobile-header">
+        <h6 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network Management</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="d-grid">
+                    <button class="btn btn-warning btn-lg system-action-btn" onclick="restartNetwork()">
+                        <i class="fas fa-redo fa-lg mb-1"></i>
+                        <div>Restart Network</div>
+                        <div class="spinner-border spinner-border-sm loading"></div>
+                    </button>
+                    <small class="text-muted mt-1">Restart all network services</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-grid">
+                    <button class="btn btn-info btn-lg system-action-btn" onclick="refreshNetworkStatus()">
+                        <i class="fas fa-sync-alt fa-lg mb-1"></i>
+                        <div>Refresh Status</div>
+                        <div class="spinner-border spinner-border-sm loading"></div>
+                    </button>
+                    <small class="text-muted mt-1">Update network information</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Management -->
+<div class="card mobile-card mb-4">
+    <div class="card-header mobile-header">
+        <h6 class="mb-0"><i class="fas fa-server me-2"></i>System Management</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="d-grid">
+                    <button class="btn btn-danger btn-lg system-action-btn" onclick="rebootSystem()" 
+                            {% if not features.system_reboot %}disabled{% endif %}>
+                        <i class="fas fa-power-off fa-lg mb-1"></i>
+                        <div>Reboot System</div>
+                        <div class="spinner-border spinner-border-sm loading"></div>
+                    </button>
+                    <small class="text-muted mt-1">
+                        {% if features.system_reboot %}
+                        Restart the entire system
+                        {% else %}
+                        System reboot is disabled
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-grid">
+                    <button class="btn btn-secondary btn-lg system-action-btn" onclick="viewSystemLogs()">
+                        <i class="fas fa-file-alt fa-lg mb-1"></i>
+                        <div>View Logs</div>
+                    </button>
+                    <small class="text-muted mt-1">Check system and application logs</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Current System Status -->
+    <div class="card mobile-card system-status-card">
+        <div class="card-header mobile-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>System Status</h6>
+                <button class="btn btn-outline-light btn-sm system-action-btn" onclick="refreshSystemStatus()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="systemStatusContent">
+                <div class="text-center text-muted py-3">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 mb-0">Loading system status...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Logs Modal -->
+<div class="modal fade" id="systemLogsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-alt me-2"></i>System Logs
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <select class="form-select" id="logTypeSelect" onchange="loadSystemLogs()">
+                        <option value="application">Application Logs</option>
+                        <option value="system">System Logs</option>
+                        <option value="network">Network Logs</option>
+                    </select>
+                </div>
+                <div id="systemLogsContent" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center text-muted py-3">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading logs...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="loadSystemLogs()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/modules/system-settings.js') }}"></script>
+{% endblock %}

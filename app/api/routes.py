@@ -226,6 +226,145 @@ def reboot_system():
         }), 500
 
 
+@api_bp.route('/system/restart-network', methods=['POST'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
+def restart_network():
+    """
+    Restart network services
+    
+    Returns:
+        JSON response with network restart result
+    """
+    try:
+        logger.warning(f"Network restart requested from {request.remote_addr}")
+        
+        result = get_system_service().restart_network()
+        return jsonify(result.to_dict())
+        
+    except Exception as e:
+        logger.error(f"Error restarting network: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'network_restart_error',
+            'message': 'Network restart failed'
+        }), 500
+
+
+@api_bp.route('/system/logs', methods=['GET'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
+def get_system_logs():
+    """
+    Get system logs
+    
+    Query Parameters:
+        type: Log type ('application', 'system', 'network')
+        lines: Number of lines to retrieve (default: 100)
+    
+    Returns:
+        JSON response with log content
+    """
+    try:
+        log_type = request.args.get('type', 'application')
+        lines = int(request.args.get('lines', 100))
+        
+        logger.info(f"System logs requested from {request.remote_addr}, type: {log_type}")
+        
+        result = get_system_service().get_system_logs(log_type, lines)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error getting system logs: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'logs_error',
+            'message': 'Failed to retrieve system logs'
+        }), 500
+
+
+# Hotspot Management Endpoints
+
+@api_bp.route('/hotspot/config', methods=['GET'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
+def get_hotspot_config():
+    """
+    Get current hotspot configuration
+    
+    Returns:
+        JSON response with hotspot configuration
+    """
+    try:
+        logger.info(f"Hotspot config requested from {request.remote_addr}")
+        
+        config = get_network_service().get_hotspot_credentials()
+        return jsonify({
+            'success': True,
+            'config': config
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting hotspot config: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'hotspot_config_error',
+            'message': 'Failed to get hotspot configuration'
+        }), 500
+
+
+@api_bp.route('/hotspot/config', methods=['POST'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_LOW'])
+@security_manager.validate_input('json')
+def update_hotspot_config():
+    """
+    Update hotspot configuration
+    
+    Request Body:
+        {
+            "ssid": "MyHotspot",
+            "password": "MyPassword",  // optional for open network
+            "visible": true,           // optional, default true
+            "enabled": true            // optional, default true
+        }
+    
+    Returns:
+        JSON response with update result
+    """
+    try:
+        data = request.get_json()
+        ssid = data.get('ssid', '').strip()
+        password = data.get('password', '').strip()
+        visible = data.get('visible', True)
+        enabled = data.get('enabled', True)
+        
+        if not ssid:
+            raise ValidationError('SSID is required', 'ssid')
+        
+        logger.info(f"Hotspot config update requested from {request.remote_addr} for SSID: {ssid[:10]}...")
+        
+        result = get_network_service().update_hotspot_config(ssid, password, visible, enabled)
+        
+        # Log result (without sensitive info)
+        if result.success:
+            logger.info(f"Successfully updated hotspot config for SSID: {ssid[:10]}...")
+        else:
+            logger.warning(f"Failed to update hotspot config for SSID: {ssid[:10]}...")
+        
+        return jsonify(result.to_dict())
+        
+    except (ValidationError, NetworkError) as e:
+        return jsonify({
+            'success': False,
+            'error': type(e).__name__.lower(),
+            'message': str(e)
+        }), 400 if isinstance(e, ValidationError) else 500
+    except Exception as e:
+        logger.error(f"Error updating hotspot config: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'hotspot_update_error',
+            'message': 'Failed to update hotspot configuration'
+        }), 500
+
+
 
 
 

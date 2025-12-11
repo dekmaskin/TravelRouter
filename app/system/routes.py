@@ -6,7 +6,7 @@ These routes maintain backward compatibility with existing frontend code.
 """
 
 import logging
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 from app.core.security import security_manager
 from app.services.system_service import SystemService

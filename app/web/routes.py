@@ -220,3 +220,27 @@ def vpn_tunnel_page():
         return render_template('error.html', 
                              error='VPN Error',
                              message='Failed to load VPN tunnel page. Please try again.'), 500
+
+
+@web_bp.route('/system-settings')
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
+def system_settings_page():
+    """System settings management page"""
+    try:
+        system_status = get_system_service().get_system_status()
+        hotspot_config = get_network_service().get_hotspot_credentials()
+        
+        return render_template('system_settings.html', 
+                             app_name=current_app.config['APP_NAME'],
+                             system_status=system_status,
+                             hotspot_config=hotspot_config,
+                             features={
+                                 'system_reboot': current_app.config['ENABLE_SYSTEM_REBOOT'],
+                                 'qr_generation': current_app.config['ENABLE_QR_GENERATION'],
+                                 'vpn_tunnel': current_app.config['ENABLE_VPN_TUNNEL']
+                             })
+    except Exception as e:
+        logger.error(f"Error loading system settings page: {e}")
+        return render_template('error.html', 
+                             error='System Settings Error',
+                             message='Failed to load system settings page. Please try again.'), 500

@@ -82,6 +82,107 @@ class SystemService:
     
 
     
+    def restart_network(self) -> SystemActionResult:
+        """
+        Restart network services
+        
+        Returns:
+            SystemActionResult object
+        """
+        try:
+            security_logger.info("Network restart initiated")
+            
+            # Restart NetworkManager service
+            cmd = ['sudo', 'systemctl', 'restart', 'NetworkManager']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                logger.info("Network services restarted successfully")
+                return SystemActionResult(
+                    success=True,
+                    message='Network services restarted successfully'
+                )
+            else:
+                logger.error(f"Failed to restart network: {result.stderr}")
+                return SystemActionResult(
+                    success=False,
+                    message='Failed to restart network services'
+                )
+                
+        except subprocess.TimeoutExpired:
+            logger.error("Network restart timed out")
+            return SystemActionResult(
+                success=False,
+                message='Network restart timed out'
+            )
+        except Exception as e:
+            logger.error(f"Error restarting network: {e}")
+            return SystemActionResult(
+                success=False,
+                message='Failed to restart network services'
+            )
+    
+    def get_system_logs(self, log_type: str = 'application', lines: int = 100) -> Dict[str, Any]:
+        """
+        Get system logs
+        
+        Args:
+            log_type: Type of logs to retrieve ('application', 'system', 'network')
+            lines: Number of lines to retrieve
+            
+        Returns:
+            Dictionary with log content
+        """
+        try:
+            if log_type == 'application':
+                # Get application logs
+                log_file = current_app.config['LOG_FILE']
+                if log_file.exists():
+                    cmd = ['tail', '-n', str(lines), str(log_file)]
+                else:
+                    return {
+                        'success': True,
+                        'logs': 'No application logs found',
+                        'log_type': log_type
+                    }
+            elif log_type == 'system':
+                # Get system logs from journalctl
+                cmd = ['sudo', 'journalctl', '-n', str(lines), '--no-pager']
+            elif log_type == 'network':
+                # Get NetworkManager logs
+                cmd = ['sudo', 'journalctl', '-u', 'NetworkManager', '-n', str(lines), '--no-pager']
+            else:
+                return {
+                    'success': False,
+                    'error': 'Invalid log type'
+                }
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            
+            if result.returncode == 0:
+                return {
+                    'success': True,
+                    'logs': result.stdout,
+                    'log_type': log_type
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Failed to retrieve {log_type} logs'
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'error': 'Log retrieval timed out'
+            }
+        except Exception as e:
+            logger.error(f"Error getting system logs: {e}")
+            return {
+                'success': False,
+                'error': 'Failed to retrieve logs'
+            }
+    
     def get_system_status(self) -> Dict[str, Any]:
         """
         Get comprehensive system status
@@ -97,13 +198,79 @@ class SystemService:
                 'system': {}
             }
             
-
+            # Check NetworkManager status
+            try:
+                result = subprocess.run(
+                    ['sudo', 'systemctl', 'is-active', 'NetworkManager'],
+                    capture_output=True, text=True, timeout=5
+                )
+                status['services']['network_manager'] = {
+                    'active': result.returncode == 0,
+                    'status': result.stdout.strip()
+                }
+            except Exception as e:
+                logger.warning(f"Could not check NetworkManager status: {e}")
+                status['services']['network_manager'] = {
+                    'active': False,
+                    'status': 'unknown'
+                }
+            
+            # Check SSH status
+            try:
+                result = subprocess.run(
+                    ['sudo', 'systemctl', 'is-active', 'ssh'],
+                    capture_output=True, text=True, timeout=5
+                )
+                status['services']['ssh'] = {
+                    'active': result.returncode == 0,
+                    'status': result.stdout.strip()
+                }
+            except Exception as e:
+                logger.warning(f"Could not check SSH status: {e}")
+                status['services']['ssh'] = {
+                    'active': False,
+                    'status': 'unknown'
+                }
+            
+            # Get system uptime
+            try:
+                with open('/proc/uptime', 'r') as f:
+                    uptime_seconds = float(f.read().split()[0])
+                    uptime_hours = int(uptime_seconds // 3600)
+                    uptime_minutes = int((uptime_seconds % 3600) // 60)
+                    status['system']['uptime'] = f"{uptime_hours}h {uptime_minutes}m"
+            except Exception as e:
+                logger.warning(f"Could not get uptime: {e}")
+                status['system']['uptime'] = 'unknown'
+            
+            # Get memory usage
+            try:
+                result = subprocess.run(
+                    ['free', '-m'], capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    lines = result.stdout.strip().split('\n')
+                    if len(lines) >= 2:
+                        mem_line = lines[1].split()
+                        if len(mem_line) >= 3:
+                            total_mem = int(mem_line[1])
+                            used_mem = int(mem_line[2])
+                            mem_percent = round((used_mem / total_mem) * 100, 1)
+                            status['system']['memory'] = {
+                                'total_mb': total_mem,
+                                'used_mb': used_mem,
+                                'usage_percent': mem_percent
+                            }
+            except Exception as e:
+                logger.warning(f"Could not get memory usage: {e}")
+                status['system']['memory'] = {'usage_percent': 0}
             
             # Add system information
-            status['system'] = {
+            status['system'].update({
                 'reboot_enabled': current_app.config['ENABLE_SYSTEM_REBOOT'],
-                'qr_generation_enabled': current_app.config['ENABLE_QR_GENERATION']
-            }
+                'qr_generation_enabled': current_app.config['ENABLE_QR_GENERATION'],
+                'vpn_tunnel_enabled': current_app.config['ENABLE_VPN_TUNNEL']
+            })
             
             return status
             
