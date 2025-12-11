@@ -134,17 +134,25 @@ class SystemSettingsManager {
                 body: JSON.stringify(config)
             });
 
-            const data = await response.json();
+            const responseText = await response.text();
+            showAlert(`DEBUG: Status=${response.status}, Response="${responseText.substring(0, 200)}"`, 'info');
 
-            if (data.success) {
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonError) {
+                showAlert('DEBUG: Response is not valid JSON', 'warning');
+                return;
+            }
+
+            if (data && data.success) {
                 showAlert('Hotspot configuration updated successfully', 'success');
                 setTimeout(() => this.refreshSystemStatus(), 2000);
             } else {
-                showAlert('Failed to update hotspot configuration: ' + (data.message || 'Unknown error'), 'danger');
+                showAlert(`DEBUG: API returned success=${data.success}, message="${data.message}"`, 'danger');
             }
         } catch (error) {
-            console.error('Error updating hotspot config:', error);
-            showAlert('Network error or invalid response', 'danger');
+            showAlert(`DEBUG: Network error - ${error.message}`, 'danger');
         }
         
         setLoadingState(submitBtn, false);
