@@ -287,17 +287,19 @@ exec bash {update_script}
                 current_interface = None
                 
                 for line in result.stdout.split('\n'):
+                    original_line = line
                     line = line.strip()
                     
-                    # Look for interface names
-                    if line and not line.startswith(' '):
+                    # Look for interface names (lines that don't start with whitespace)
+                    if original_line and not original_line.startswith(' ') and ':' in line:
                         parts = line.split(':')
-                        if len(parts) >= 2:
+                        if len(parts) >= 3:  # Format: "2: eth0: <FLAGS>"
                             interface_name = parts[1].strip()
                             current_interface = interface_name
+                            logger.debug(f"Found interface: {interface_name}")
                     
-                    # Look for inet addresses
-                    elif line.startswith('inet ') and current_interface:
+                    # Look for inet addresses (lines that start with whitespace and contain 'inet ')
+                    elif original_line.startswith('    inet ') and current_interface:
                         parts = line.split()
                         if len(parts) >= 2:
                             ip_with_mask = parts[1]
@@ -306,13 +308,17 @@ exec bash {update_script}
                             # Skip loopback
                             if ip_address != '127.0.0.1':
                                 interfaces[current_interface] = ip_address
+                                logger.debug(f"Interface {current_interface}: {ip_address}")
+            
+            logger.info(f"Detected interfaces: {interfaces}")
             
             # Get specific interfaces we care about
             hotspot_ip = interfaces.get('wlan0', None)  # Hotspot interface
             ethernet_ip = interfaces.get('eth0', None)  # Ethernet interface
             wifi_client_ip = interfaces.get('wlan1', None)  # WiFi client interface
+            vpn_ip = interfaces.get('wg0', None)  # VPN interface
             
-            return {
+            result = {
                 'hotspot': {
                     'interface': 'wlan0',
                     'ip': hotspot_ip,
@@ -328,8 +334,16 @@ exec bash {update_script}
                     'ip': wifi_client_ip,
                     'name': 'WiFi Client'
                 },
+                'vpn': {
+                    'interface': 'wg0',
+                    'ip': vpn_ip,
+                    'name': 'VPN Tunnel'
+                },
                 'all_interfaces': interfaces
             }
+            
+            logger.info(f"Network interfaces result: {result}")
+            return result
             
         except Exception as e:
             logger.error(f"Error getting network interfaces: {e}")
@@ -337,6 +351,7 @@ exec bash {update_script}
                 'hotspot': {'interface': 'wlan0', 'ip': None, 'name': 'Hotspot WiFi'},
                 'ethernet': {'interface': 'eth0', 'ip': None, 'name': 'Ethernet'},
                 'wifi_client': {'interface': 'wlan1', 'ip': None, 'name': 'WiFi Client'},
+                'vpn': {'interface': 'wg0', 'ip': None, 'name': 'VPN Tunnel'},
                 'all_interfaces': {}
             }
     

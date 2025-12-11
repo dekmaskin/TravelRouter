@@ -342,6 +342,19 @@ class SystemSettingsManager {
                 `);
             }
             
+            if (interfaces.vpn?.ip) {
+                interfaceItems.push(`
+                    <div class="col-md-6">
+                        <div class="status-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-shield-alt me-2"></i>VPN IP</span>
+                                <span class="text-muted font-monospace">${interfaces.vpn.ip}</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
             networkInterfacesSection = interfaceItems.join('');
         }
 

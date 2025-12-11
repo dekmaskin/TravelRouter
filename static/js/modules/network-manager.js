@@ -48,6 +48,8 @@ class NetworkManager {
     updateIPAddresses(interfaces) {
         const hotspotIpElement = document.getElementById('hotspotIp');
         const ethernetIpElement = document.getElementById('ethernetIp');
+        const vpnIpElement = document.getElementById('vpnIp');
+        const vpnIpCard = document.getElementById('vpnIpCard');
         
         if (hotspotIpElement) {
             const hotspotIp = interfaces.hotspot?.ip || 'Not Available';
@@ -59,6 +61,17 @@ class NetworkManager {
             const ethernetIp = interfaces.ethernet?.ip || 'Not Connected';
             ethernetIpElement.textContent = ethernetIp;
             ethernetIpElement.className = ethernetIp !== 'Not Connected' ? 'text-success mb-0 font-monospace' : 'text-muted mb-0';
+        }
+        
+        if (vpnIpElement && vpnIpCard) {
+            const vpnIp = interfaces.vpn?.ip;
+            if (vpnIp) {
+                vpnIpElement.textContent = vpnIp;
+                vpnIpElement.className = 'text-success mb-0 font-monospace';
+                vpnIpCard.style.display = 'block';
+            } else {
+                vpnIpCard.style.display = 'none';
+            }
         }
     }
 
