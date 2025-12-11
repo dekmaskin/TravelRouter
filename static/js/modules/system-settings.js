@@ -195,6 +195,20 @@ class SystemSettingsManager {
 
         try {
             console.log('Fetching system status...');
+            
+            // If update is in progress, check update status first
+            let updateStatus = null;
+            if (this.updateInProgress) {
+                try {
+                    const updateResponse = await fetch('/api/v1/system/update/status');
+                    if (updateResponse.ok) {
+                        updateStatus = await updateResponse.json();
+                    }
+                } catch (error) {
+                    console.warn('Could not fetch update status:', error);
+                }
+            }
+            
             const response = await fetch('/api/v1/system/status');
             console.log('Response status:', response.status);
             
@@ -206,7 +220,7 @@ class SystemSettingsManager {
             console.log('System status data:', data);
 
             if (data.success) {
-                this.updateSystemStatusDisplay(data);
+                this.updateSystemStatusDisplay(data, updateStatus);
             } else {
                 console.error('Failed to get system status:', data.message || data.error);
                 container.innerHTML = `
@@ -227,15 +241,56 @@ class SystemSettingsManager {
         }
     }
 
-    updateSystemStatusDisplay(status) {
+    updateSystemStatusDisplay(status, updateStatus = null) {
         const container = document.getElementById('systemStatusContent');
         if (!container) return;
 
         const services = status.services || {};
         const system = status.system || {};
 
+        // If update is in progress, show update status prominently
+        let updateSection = '';
+        if (updateStatus && updateStatus.success && updateStatus.update_running) {
+            updateSection = `
+                <div class="col-12 mb-3">
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-3" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div>
+                                <strong><i class="fas fa-download me-2"></i>System Update in Progress</strong>
+                                <div class="small text-muted mt-1">${updateStatus.status || 'Update in progress...'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (this.updateInProgress && (!updateStatus || !updateStatus.update_running)) {
+            // Update completed
+            this.updateInProgress = false;
+            if (this.updateStatusInterval) {
+                clearInterval(this.updateStatusInterval);
+                this.updateStatusInterval = null;
+            }
+            updateSection = `
+                <div class="col-12 mb-3">
+                    <div class="alert alert-success">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle me-3"></i>
+                            <div>
+                                <strong>System Update Completed</strong>
+                                <div class="small text-muted mt-1">System has been updated successfully</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         container.innerHTML = `
             <div class="row g-3">
+                ${updateSection}
                 <div class="col-md-6">
                     <div class="status-item">
                         <div class="d-flex justify-content-between align-items-center">
@@ -334,13 +389,13 @@ class SystemSettingsManager {
             const data = await response.json();
 
             if (data.success) {
-                showAlert('System update initiated. Monitoring update progress...', 'info');
+                showAlert('System update initiated. Check the system status below for progress...', 'info');
                 
                 // Start monitoring update progress
                 this.startUpdateStatusMonitoring();
                 
-                // Show update progress in system status
-                this.showUpdateProgress();
+                // Immediately refresh system status to show update started
+                setTimeout(() => this.refreshSystemStatus(), 1000);
             } else {
                 showAlert(data.message || 'Failed to start system update', 'danger');
                 this.updateInProgress = false;
@@ -360,60 +415,36 @@ class SystemSettingsManager {
             clearInterval(this.updateStatusInterval);
         }
 
-        // Check update status every 5 seconds
+        // Check update status every 3 seconds and refresh system status to show progress
         this.updateStatusInterval = setInterval(async () => {
             try {
+                // Refresh system status which will now include update status
+                await this.refreshSystemStatus();
+                
+                // Check if update is still running
                 const response = await fetch('/api/v1/system/update/status');
                 const data = await response.json();
 
-                if (data.success) {
-                    if (data.update_running) {
-                        this.updateUpdateProgress(data.status || 'Update in progress...');
-                    } else {
-                        // Update completed
-                        this.updateInProgress = false;
-                        clearInterval(this.updateStatusInterval);
-                        this.updateStatusInterval = null;
-                        
-                        showAlert('System update completed! Refreshing system status...', 'success');
-                        
-                        // Wait a moment then refresh status
-                        setTimeout(() => {
-                            this.refreshSystemStatus();
-                        }, 2000);
-                    }
+                if (data.success && !data.update_running) {
+                    // Update completed
+                    this.updateInProgress = false;
+                    clearInterval(this.updateStatusInterval);
+                    this.updateStatusInterval = null;
+                    
+                    showAlert('System update completed successfully!', 'success');
+                    
+                    // Final refresh to show completion status
+                    setTimeout(() => {
+                        this.refreshSystemStatus();
+                    }, 1000);
                 }
             } catch (error) {
                 console.error('Error checking update status:', error);
             }
-        }, 5000);
+        }, 3000);
     }
 
-    showUpdateProgress() {
-        const container = document.getElementById('systemStatusContent');
-        if (!container) return;
 
-        container.innerHTML = `
-            <div class="alert alert-info">
-                <div class="d-flex align-items-center">
-                    <div class="spinner-border spinner-border-sm me-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <div>
-                        <strong>System Update in Progress</strong>
-                        <div id="updateProgressText" class="small text-muted">Initializing update...</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    updateUpdateProgress(statusText) {
-        const progressText = document.getElementById('updateProgressText');
-        if (progressText) {
-            progressText.textContent = statusText;
-        }
-    }
 
     async rebootSystem() {
         if (!confirm('Are you sure you want to reboot the system? This will disconnect all users and restart the router.')) {
