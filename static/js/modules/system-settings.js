@@ -108,17 +108,17 @@ class SystemSettingsManager {
 
         // Validation
         if (!config.ssid) {
-            showAlert('warning', 'Hotspot SSID is required');
+            showAlert('Hotspot SSID is required', 'warning');
             return;
         }
 
         if (config.ssid.length > 32) {
-            showAlert('warning', 'Hotspot SSID must be 32 characters or less');
+            showAlert('Hotspot SSID must be 32 characters or less', 'warning');
             return;
         }
 
         if (config.password && (config.password.length < 8 || config.password.length > 63)) {
-            showAlert('warning', 'Password must be between 8 and 63 characters, or empty for open network');
+            showAlert('Password must be between 8 and 63 characters, or empty for open network', 'warning');
             return;
         }
 
@@ -137,15 +137,15 @@ class SystemSettingsManager {
             const data = await response.json();
 
             if (data.success) {
-                showAlert('success', data.message || 'Hotspot configuration updated successfully');
+                showAlert(data.message || 'Hotspot configuration updated successfully', 'success');
                 // Refresh system status to show updated info
                 setTimeout(() => this.refreshSystemStatus(), 2000);
             } else {
-                showAlert('danger', data.message || 'Failed to update hotspot configuration');
+                showAlert(data.message || 'Failed to update hotspot configuration', 'danger');
             }
         } catch (error) {
             console.error('Error updating hotspot config:', error);
-            showAlert('danger', 'Failed to update hotspot configuration');
+            showAlert('Failed to update hotspot configuration', 'danger');
         } finally {
             const submitBtn = form.querySelector('button[type="submit"]');
             setLoadingState(submitBtn, false);
@@ -282,15 +282,15 @@ class SystemSettingsManager {
             const data = await response.json();
 
             if (data.success) {
-                showAlert('success', data.message || 'Network services restarted successfully');
+                showAlert(data.message || 'Network services restarted successfully', 'success');
                 // Refresh status after a delay
                 setTimeout(() => this.refreshSystemStatus(), 5000);
             } else {
-                showAlert('danger', data.message || 'Failed to restart network services');
+                showAlert(data.message || 'Failed to restart network services', 'danger');
             }
         } catch (error) {
             console.error('Error restarting network:', error);
-            showAlert('danger', 'Failed to restart network services');
+            showAlert('Failed to restart network services', 'danger');
         } finally {
             setLoadingState(btn, false);
         }
@@ -316,18 +316,18 @@ class SystemSettingsManager {
             const data = await response.json();
 
             if (data.success) {
-                showAlert('info', 'System reboot initiated. The router will be back online in 1-2 minutes.');
+                showAlert('System reboot initiated. The router will be back online in 1-2 minutes.', 'info');
                 // Disable all buttons to prevent further actions
                 document.querySelectorAll('button').forEach(button => {
                     button.disabled = true;
                 });
             } else {
-                showAlert('danger', data.message || 'Failed to reboot system');
+                showAlert(data.message || 'Failed to reboot system', 'danger');
                 setLoadingState(btn, false);
             }
         } catch (error) {
             console.error('Error rebooting system:', error);
-            showAlert('danger', 'Failed to reboot system');
+            showAlert('Failed to reboot system', 'danger');
             setLoadingState(btn, false);
         }
     }
@@ -336,7 +336,7 @@ class SystemSettingsManager {
         const logsSection = document.getElementById('systemLogsSection');
         if (!logsSection) {
             console.error('System logs section not found');
-            showAlert('danger', 'System logs section not available');
+            showAlert('System logs section not available', 'danger');
             return;
         }
 

@@ -483,7 +483,11 @@ class NetworkService:
             Dictionary with ssid, password, visible, and enabled keys
         """
         try:
-            # Try to read from hostapd configuration
+            # Check if system uses hostapd
+            if self._is_hostapd_managed():
+                return self._get_hostapd_credentials()
+            
+            # Try to read from hostapd configuration as fallback
             hostapd_config = '/etc/hostapd/hostapd.conf'
             
             result = subprocess.run(
@@ -601,8 +605,11 @@ class NetworkService:
             
             logger.info(f"Updating hotspot configuration: SSID={sanitized_ssid}")
             
-            # Use NetworkManager to update hotspot configuration
-            return self._update_nm_hotspot(sanitized_ssid, password, visible, enabled)
+            # Check if system uses hostapd or NetworkManager
+            if self._is_hostapd_managed():
+                return self._update_hostapd_config(sanitized_ssid, password, visible, enabled)
+            else:
+                return self._update_nm_hotspot(sanitized_ssid, password, visible, enabled)
             
         except (ValidationError, NetworkError):
             raise
@@ -874,4 +881,202 @@ class NetworkService:
         except Exception as e:
             logger.warning(f"Error getting WiFi interfaces: {e}")
             return []
+    
+    def _is_hostapd_managed(self) -> bool:
+        """Check if the system uses hostapd for AP management"""
+        try:
+            # Check if hostapd service is active
+            result = subprocess.run(
+                ['sudo', 'systemctl', 'is-active', 'hostapd'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            if result.returncode == 0 and result.stdout.strip() == 'active':
+                logger.info("Detected hostapd-managed system")
+                return True
+            
+            logger.info("No active hostapd service detected, using NetworkManager")
+            return False
+            
+        except Exception as e:
+            logger.warning(f"Error checking hostapd status: {e}")
+            return False
+    
+    def _update_hostapd_config(self, ssid: str, password: str, visible: bool, enabled: bool) -> ConnectionResult:
+        """Update hotspot using hostapd configuration"""
+        try:
+            logger.info(f"Updating hostapd configuration: SSID={ssid}, enabled={enabled}, visible={visible}")
+            
+            hostapd_conf = '/etc/hostapd/hostapd.conf'
+            
+            if not enabled:
+                # Stop hostapd service
+                result = subprocess.run(
+                    ['sudo', 'systemctl', 'stop', 'hostapd'],
+                    capture_output=True, text=True, timeout=15
+                )
+                
+                if result.returncode == 0:
+                    logger.info("Hostapd service stopped")
+                    return ConnectionResult(
+                        success=True,
+                        message='Hotspot disabled successfully'
+                    )
+                else:
+                    return ConnectionResult(
+                        success=False,
+                        message='Failed to stop hotspot service'
+                    )
+            
+            # Read current configuration
+            try:
+                with open(hostapd_conf, 'r') as f:
+                    config_lines = f.readlines()
+            except Exception as e:
+                logger.error(f"Failed to read hostapd config: {e}")
+                return ConnectionResult(
+                    success=False,
+                    message='Failed to read current hotspot configuration'
+                )
+            
+            # Update configuration
+            new_config = []
+            ssid_updated = False
+            password_updated = False
+            visibility_updated = False
+            
+            for line in config_lines:
+                line = line.strip()
+                
+                if line.startswith('ssid='):
+                    new_config.append(f'ssid={ssid}\n')
+                    ssid_updated = True
+                elif line.startswith('wpa_passphrase='):
+                    if password:
+                        new_config.append(f'wpa_passphrase={password}\n')
+                    password_updated = True
+                elif line.startswith('ignore_broadcast_ssid='):
+                    new_config.append(f'ignore_broadcast_ssid={0 if visible else 1}\n')
+                    visibility_updated = True
+                elif line.startswith('wpa='):
+                    if password:
+                        new_config.append('wpa=2\n')
+                    else:
+                        # For open network, comment out WPA settings
+                        new_config.append('#wpa=2\n')
+                elif line.startswith('wpa_key_mgmt=') or line.startswith('wpa_pairwise=') or line.startswith('rsn_pairwise='):
+                    if password:
+                        new_config.append(line + '\n')
+                    else:
+                        new_config.append('#' + line + '\n')
+                else:
+                    new_config.append(line + '\n')
+            
+            # Add missing configuration if not found
+            if not ssid_updated:
+                new_config.append(f'ssid={ssid}\n')
+            
+            if not visibility_updated:
+                new_config.append(f'ignore_broadcast_ssid={0 if visible else 1}\n')
+            
+            if password and not password_updated:
+                new_config.append(f'wpa_passphrase={password}\n')
+            
+            # Write updated configuration
+            try:
+                with open(hostapd_conf, 'w') as f:
+                    f.writelines(new_config)
+                logger.info("Hostapd configuration updated")
+            except Exception as e:
+                logger.error(f"Failed to write hostapd config: {e}")
+                return ConnectionResult(
+                    success=False,
+                    message='Failed to update hotspot configuration file'
+                )
+            
+            # Restart hostapd service
+            result = subprocess.run(
+                ['sudo', 'systemctl', 'restart', 'hostapd'],
+                capture_output=True, text=True, timeout=20
+            )
+            
+            if result.returncode == 0:
+                logger.info("Hostapd service restarted successfully")
+                return ConnectionResult(
+                    success=True,
+                    message=f'Hotspot "{ssid}" configured and restarted successfully'
+                )
+            else:
+                error_msg = result.stderr.strip() or result.stdout.strip()
+                logger.error(f"Failed to restart hostapd: {error_msg}")
+                return ConnectionResult(
+                    success=False,
+                    message=f'Configuration updated but failed to restart hotspot service: {error_msg}'
+                )
+                
+        except Exception as e:
+            logger.error(f"Error updating hostapd configuration: {e}")
+            return ConnectionResult(
+                success=False,
+                message=f'Failed to update hostspot configuration: {str(e)}'
+            )
+    
+    def _get_hostapd_credentials(self) -> Dict[str, str]:
+        """Get hotspot credentials from hostapd configuration"""
+        try:
+            hostapd_config = '/etc/hostapd/hostapd.conf'
+            
+            # Check if hostapd service is running
+            result = subprocess.run(
+                ['sudo', 'systemctl', 'is-active', 'hostapd'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            enabled = result.returncode == 0 and result.stdout.strip() == 'active'
+            
+            # Read configuration file
+            with open(hostapd_config, 'r') as f:
+                config_content = f.read()
+            
+            ssid = None
+            password = None
+            hidden = False
+            
+            for line in config_content.split('\n'):
+                line = line.strip()
+                if line.startswith('ssid='):
+                    ssid = line.split('=', 1)[1]
+                elif line.startswith('wpa_passphrase='):
+                    password = line.split('=', 1)[1]
+                elif line.startswith('ignore_broadcast_ssid='):
+                    hidden = line.split('=', 1)[1] == '1'
+            
+            if ssid:
+                logger.info(f"Found hostapd configuration: SSID={ssid[:10]}..., enabled={enabled}")
+                return {
+                    'ssid': ssid,
+                    'password': password or '',
+                    'security': 'WPA' if password else 'Open',
+                    'visible': not hidden,
+                    'enabled': enabled
+                }
+            
+            # Fallback if no SSID found
+            return {
+                'ssid': self.default_ap_ssid,
+                'password': current_app.config['DEFAULT_AP_PASSWORD'],
+                'security': 'WPA',
+                'visible': True,
+                'enabled': enabled
+            }
+            
+        except Exception as e:
+            logger.error(f"Error reading hostapd configuration: {e}")
+            return {
+                'ssid': self.default_ap_ssid,
+                'password': current_app.config['DEFAULT_AP_PASSWORD'],
+                'security': 'WPA',
+                'visible': True,
+                'enabled': False
+            }
     
