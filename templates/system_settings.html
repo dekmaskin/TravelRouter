@@ -115,13 +115,13 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <div class="d-grid">
-                    <button class="btn btn-primary btn-lg system-action-btn" onclick="updateSystem()"
+                    <button id="updateSystemBtn" class="btn btn-primary btn-lg system-action-btn" onclick="updateSystem()"
                             {% if not features.system_update %}disabled{% endif %}>
                         <i class="fas fa-download fa-lg mb-1"></i>
                         <div>Update System</div>
                         <div class="spinner-border spinner-border-sm loading"></div>
                     </button>
-                    <small class="text-muted mt-1">
+                    <small id="updateSystemHelp" class="text-muted mt-1">
                         {% if features.system_update %}
                         Update to the latest version
                         {% else %}

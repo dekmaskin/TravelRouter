@@ -226,6 +226,35 @@ class SystemService:
                 'update_running': False
             }
     
+    def _check_internet_connectivity(self) -> bool:
+        """
+        Check if internet connectivity is available
+        
+        Returns:
+            bool: True if internet is available, False otherwise
+        """
+        try:
+            # Try to ping a reliable DNS server (Google's 8.8.8.8)
+            result = subprocess.run(
+                ['ping', '-c', '1', '-W', '3', '8.8.8.8'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            if result.returncode == 0:
+                return True
+            
+            # If ping fails, try a different approach - DNS lookup
+            result = subprocess.run(
+                ['nslookup', 'google.com'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            return result.returncode == 0
+            
+        except (subprocess.TimeoutExpired, Exception) as e:
+            logger.warning(f"Internet connectivity check failed: {e}")
+            return False
+    
     def get_system_logs(self, log_type: str = 'application', lines: int = 100) -> Dict[str, Any]:
         """
         Get system logs
@@ -369,12 +398,16 @@ class SystemService:
                 logger.warning(f"Could not get memory usage: {e}")
                 status['system']['memory'] = {'usage_percent': 0}
             
+            # Check internet connectivity
+            internet_connected = self._check_internet_connectivity()
+            
             # Add system information
             status['system'].update({
                 'reboot_enabled': current_app.config['ENABLE_SYSTEM_REBOOT'],
                 'update_enabled': current_app.config['ENABLE_SYSTEM_UPDATE'],
                 'qr_generation_enabled': current_app.config['ENABLE_QR_GENERATION'],
-                'vpn_tunnel_enabled': current_app.config['ENABLE_VPN_TUNNEL']
+                'vpn_tunnel_enabled': current_app.config['ENABLE_VPN_TUNNEL'],
+                'internet_connected': internet_connected
             })
             
             return status

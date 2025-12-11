@@ -217,20 +217,10 @@ echo "Next Steps:"
 echo "1. Test the portal: http://192.168.4.1"
 echo "2. Check service status: systemctl status $SERVICE_NAME"
 echo "3. View logs: journalctl -u $SERVICE_NAME -f"
-echo "4. Run health check: $APP_DIR/health-check.sh"
+echo "4. Run health check manually if needed: $APP_DIR/health-check.sh"
 echo ""
 
-# Run health check
-read -p "Would you like to run a health check now? (y/N): " -r
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo ""
-    echo "Running health check..."
-    if [[ -f "$APP_DIR/health-check.sh" ]]; then
-        $APP_DIR/health-check.sh
-    else
-        echo "Health check script not found"
-    fi
-fi
+
 
 echo ""
 echo "If you encounter any issues, you can restore from backup:"

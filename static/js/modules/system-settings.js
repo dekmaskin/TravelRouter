@@ -248,6 +248,9 @@ class SystemSettingsManager {
         const services = status.services || {};
         const system = status.system || {};
 
+        // Update the update system button based on internet connectivity
+        this.updateUpdateButtonState(system.internet_connected, system.update_enabled);
+
         // If update is in progress, show update status prominently
         let updateSection = '';
         if (updateStatus && updateStatus.success && updateStatus.update_running) {
@@ -288,6 +291,11 @@ class SystemSettingsManager {
             `;
         }
 
+        // Add internet connectivity status
+        const internetStatus = system.internet_connected ? 
+            '<span class="badge bg-success">Connected</span>' : 
+            '<span class="badge bg-danger">Offline</span>';
+
         container.innerHTML = `
             <div class="row g-3">
                 ${updateSection}
@@ -308,6 +316,14 @@ class SystemSettingsManager {
                             <span class="badge ${services.ssh?.active ? 'bg-success' : 'bg-danger'}">
                                 ${services.ssh?.active ? 'Active' : 'Inactive'}
                             </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="status-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-globe me-2"></i>Internet</span>
+                            ${internetStatus}
                         </div>
                     </div>
                 </div>
@@ -336,6 +352,26 @@ class SystemSettingsManager {
                 Last updated: ${new Date().toLocaleTimeString()}
             </div>
         `;
+    }
+
+    updateUpdateButtonState(internetConnected, updateEnabled) {
+        const updateBtn = document.getElementById('updateSystemBtn');
+        const updateHelp = document.getElementById('updateSystemHelp');
+        
+        if (!updateBtn || !updateHelp) return;
+
+        if (!updateEnabled) {
+            updateBtn.disabled = true;
+            updateHelp.textContent = 'System update is disabled';
+        } else if (!internetConnected) {
+            updateBtn.disabled = true;
+            updateHelp.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Internet connection required for updates';
+            updateHelp.className = 'text-warning mt-1';
+        } else {
+            updateBtn.disabled = false;
+            updateHelp.textContent = 'Update to the latest version';
+            updateHelp.className = 'text-muted mt-1';
+        }
     }
 
     async restartNetwork() {
@@ -369,6 +405,13 @@ class SystemSettingsManager {
     }
 
     async updateSystem() {
+        // Check if button is disabled (no internet or feature disabled)
+        const updateBtn = document.getElementById('updateSystemBtn');
+        if (updateBtn && updateBtn.disabled) {
+            showAlert('System update is not available. Check internet connection and system settings.', 'warning');
+            return;
+        }
+
         if (!confirm('Are you sure you want to update the system? This will download and install the latest version.')) {
             return;
         }
