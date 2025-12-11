@@ -333,28 +333,28 @@ class SystemSettingsManager {
     }
 
     async viewSystemLogs() {
-        const modalElement = document.getElementById('systemLogsModal');
-        if (!modalElement) {
-            console.error('System logs modal not found');
-            showAlert('danger', 'System logs modal not available');
+        const logsSection = document.getElementById('systemLogsSection');
+        if (!logsSection) {
+            console.error('System logs section not found');
+            showAlert('danger', 'System logs section not available');
             return;
         }
 
-        // Use Bootstrap 5 modal API
-        let modal;
-        try {
-            modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-            modal.show();
-        } catch (error) {
-            console.error('Error showing modal:', error);
-            // Fallback: show modal manually
-            modalElement.style.display = 'block';
-            modalElement.classList.add('show');
-            document.body.classList.add('modal-open');
-        }
+        // Show the logs section
+        logsSection.style.display = 'block';
+        
+        // Scroll to the logs section
+        logsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
         // Load initial logs
         await this.loadSystemLogs();
+    }
+
+    hideSystemLogs() {
+        const logsSection = document.getElementById('systemLogsSection');
+        if (logsSection) {
+            logsSection.style.display = 'none';
+        }
     }
 
     async loadSystemLogs() {
@@ -379,14 +379,17 @@ class SystemSettingsManager {
             if (data.success) {
                 const logs = data.logs || 'No logs available';
                 container.innerHTML = `
-                    <pre class="bg-dark text-light p-3 rounded" style="font-size: 0.85em; line-height: 1.4;">${this.escapeHtml(logs)}</pre>
+                    <pre class="log-viewer">${this.escapeHtml(logs)}</pre>
                 `;
                 
                 // Auto-scroll to bottom
-                container.scrollTop = container.scrollHeight;
+                const logViewer = container.querySelector('.log-viewer');
+                if (logViewer) {
+                    logViewer.scrollTop = logViewer.scrollHeight;
+                }
             } else {
                 container.innerHTML = `
-                    <div class="alert alert-warning">
+                    <div class="alert alert-warning m-3">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         ${data.error || 'Failed to load logs'}
                     </div>
@@ -395,7 +398,7 @@ class SystemSettingsManager {
         } catch (error) {
             console.error('Error loading system logs:', error);
             container.innerHTML = `
-                <div class="alert alert-danger">
+                <div class="alert alert-danger m-3">
                     <i class="fas fa-exclamation-circle me-2"></i>
                     Failed to load system logs
                 </div>
@@ -450,6 +453,12 @@ window.viewSystemLogs = () => {
 window.loadSystemLogs = () => {
     if (window.systemSettingsManager) {
         window.systemSettingsManager.loadSystemLogs();
+    }
+};
+
+window.hideSystemLogs = () => {
+    if (window.systemSettingsManager) {
+        window.systemSettingsManager.hideSystemLogs();
     }
 };
 

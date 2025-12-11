@@ -601,13 +601,8 @@ class NetworkService:
             
             logger.info(f"Updating hotspot configuration: SSID={sanitized_ssid}")
             
-            # First, try to update using NetworkManager
-            result = self._update_nm_hotspot(sanitized_ssid, password, visible, enabled)
-            if result.success:
-                return result
-            
-            # Fallback: try to update hostapd configuration
-            return self._update_hostapd_config(sanitized_ssid, password, visible, enabled)
+            # Use NetworkManager to update hotspot configuration
+            return self._update_nm_hotspot(sanitized_ssid, password, visible, enabled)
             
         except (ValidationError, NetworkError):
             raise
@@ -621,102 +616,98 @@ class NetworkService:
     def _update_nm_hotspot(self, ssid: str, password: str, visible: bool, enabled: bool) -> ConnectionResult:
         """Update hotspot using NetworkManager"""
         try:
-            # Check if hotspot connection exists
+            logger.info(f"Updating NetworkManager hotspot: SSID={ssid}, enabled={enabled}, visible={visible}")
+            
+            # First, find any existing hotspot connections on the AP interface
+            existing_connections = self._find_ap_connections()
+            logger.info(f"Found existing AP connections: {existing_connections}")
+            
+            if not enabled:
+                # Disable all hotspot connections
+                for conn_name in existing_connections:
+                    try:
+                        result = subprocess.run(
+                            ['sudo', 'nmcli', 'connection', 'down', conn_name],
+                            capture_output=True, text=True, timeout=15
+                        )
+                        if result.returncode == 0:
+                            logger.info(f"Disabled hotspot connection: {conn_name}")
+                    except Exception as e:
+                        logger.warning(f"Failed to disable connection {conn_name}: {e}")
+                
+                return ConnectionResult(
+                    success=True,
+                    message='Hotspot disabled successfully'
+                )
+            
+            # For enabled hotspot, we need to create/update the configuration
+            connection_name = ssid  # Use SSID as connection name
+            
+            # Delete any existing connection with this name to start fresh
+            if connection_name in existing_connections:
+                try:
+                    subprocess.run(
+                        ['sudo', 'nmcli', 'connection', 'delete', connection_name],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    logger.info(f"Deleted existing connection: {connection_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete existing connection: {e}")
+            
+            # Create new hotspot connection
+            cmd = ['sudo', 'nmcli', 'connection', 'add', 'type', 'wifi', 'ifname', self.ap_interface]
+            cmd.extend(['con-name', connection_name, 'autoconnect', 'yes'])
+            cmd.extend(['wifi.mode', 'ap', 'wifi.ssid', ssid])
+            cmd.extend(['ipv4.method', 'shared'])
+            
+            # Configure security
+            if password and password.strip():
+                cmd.extend(['wifi-sec.key-mgmt', 'wpa-psk'])
+                cmd.extend(['wifi-sec.psk', password.strip()])
+                logger.info("Configured WPA-PSK security")
+            else:
+                # Open network - explicitly set no security
+                cmd.extend(['wifi-sec.key-mgmt', ''])
+                logger.info("Configured open network (no security)")
+            
+            # Configure visibility
+            if not visible:
+                cmd.extend(['wifi.hidden', 'true'])
+                logger.info("Configured hidden network")
+            
+            logger.info(f"Creating hotspot with command: {' '.join(cmd[:-2])} [password hidden]")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+            
+            if result.returncode != 0:
+                error_msg = result.stderr.strip() or result.stdout.strip()
+                logger.error(f"Failed to create hotspot connection: {error_msg}")
+                return ConnectionResult(
+                    success=False,
+                    message=f'Failed to create hotspot configuration: {error_msg}'
+                )
+            
+            logger.info("Hotspot connection created successfully")
+            
+            # Activate the connection
+            logger.info(f"Activating hotspot connection: {connection_name}")
             result = subprocess.run(
-                ['nmcli', 'connection', 'show', ssid],
-                capture_output=True, text=True, timeout=10
+                ['sudo', 'nmcli', 'connection', 'up', connection_name],
+                capture_output=True, text=True, timeout=30
             )
             
-            connection_exists = result.returncode == 0
-            
-            if enabled:
-                if connection_exists:
-                    # Modify existing connection
-                    cmd = ['sudo', 'nmcli', 'connection', 'modify', ssid]
-                    cmd.extend(['802-11-wireless.ssid', ssid])
-                    
-                    if password:
-                        cmd.extend(['802-11-wireless-security.key-mgmt', 'wpa-psk'])
-                        cmd.extend(['802-11-wireless-security.psk', password])
-                    else:
-                        cmd.extend(['802-11-wireless-security.key-mgmt', ''])
-                        cmd.extend(['802-11-wireless-security.psk', ''])
-                    
-                    # Set visibility
-                    cmd.extend(['802-11-wireless.hidden', 'false' if visible else 'true'])
-                    
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-                    
-                    if result.returncode != 0:
-                        logger.error(f"Failed to modify hotspot connection: {result.stderr}")
-                        return ConnectionResult(
-                            success=False,
-                            message='Failed to update hotspot settings'
-                        )
-                else:
-                    # Create new hotspot connection
-                    cmd = ['sudo', 'nmcli', 'connection', 'add', 'type', 'wifi', 'ifname', self.ap_interface]
-                    cmd.extend(['con-name', ssid, 'autoconnect', 'yes', 'wifi.mode', 'ap'])
-                    cmd.extend(['wifi.ssid', ssid])
-                    cmd.extend(['ipv4.method', 'shared'])
-                    
-                    if password:
-                        cmd.extend(['wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', password])
-                    
-                    # Set visibility
-                    if not visible:
-                        cmd.extend(['wifi.hidden', 'true'])
-                    
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-                    
-                    if result.returncode != 0:
-                        logger.error(f"Failed to create hotspot connection: {result.stderr}")
-                        return ConnectionResult(
-                            success=False,
-                            message='Failed to create hotspot configuration'
-                        )
-                
-                # Activate the connection
-                result = subprocess.run(
-                    ['sudo', 'nmcli', 'connection', 'up', ssid],
-                    capture_output=True, text=True, timeout=20
+            if result.returncode == 0:
+                logger.info(f"Hotspot {ssid} activated successfully")
+                return ConnectionResult(
+                    success=True,
+                    message=f'Hotspot "{ssid}" configured and activated successfully'
                 )
-                
-                if result.returncode == 0:
-                    logger.info(f"Hotspot {ssid} activated successfully")
-                    return ConnectionResult(
-                        success=True,
-                        message=f'Hotspot "{ssid}" configured and activated successfully'
-                    )
-                else:
-                    logger.error(f"Failed to activate hotspot: {result.stderr}")
-                    return ConnectionResult(
-                        success=False,
-                        message='Hotspot configured but failed to activate'
-                    )
             else:
-                # Disable hotspot
-                if connection_exists:
-                    result = subprocess.run(
-                        ['sudo', 'nmcli', 'connection', 'down', ssid],
-                        capture_output=True, text=True, timeout=15
-                    )
-                    
-                    if result.returncode == 0:
-                        return ConnectionResult(
-                            success=True,
-                            message='Hotspot disabled successfully'
-                        )
-                    else:
-                        return ConnectionResult(
-                            success=False,
-                            message='Failed to disable hotspot'
-                        )
-                else:
-                    return ConnectionResult(
-                        success=True,
-                        message='Hotspot is already disabled'
-                    )
+                error_msg = result.stderr.strip() or result.stdout.strip()
+                logger.error(f"Failed to activate hotspot: {error_msg}")
+                return ConnectionResult(
+                    success=False,
+                    message=f'Hotspot created but failed to activate: {error_msg}'
+                )
                     
         except subprocess.TimeoutExpired:
             logger.error("Timeout updating NetworkManager hotspot")
@@ -728,24 +719,31 @@ class NetworkService:
             logger.error(f"Error updating NetworkManager hotspot: {e}")
             return ConnectionResult(
                 success=False,
-                message='Failed to update hotspot via NetworkManager'
+                message=f'Failed to update hotspot: {str(e)}'
             )
     
-    def _update_hostapd_config(self, ssid: str, password: str, visible: bool, enabled: bool) -> ConnectionResult:
-        """Update hotspot using hostapd configuration (fallback method)"""
+    def _find_ap_connections(self) -> List[str]:
+        """Find all AP mode connections on the AP interface"""
         try:
-            logger.info("Attempting to update hotspot via hostapd configuration")
-            
-            # This is a simplified implementation - in a real scenario you'd want to
-            # properly parse and update the hostapd.conf file
-            return ConnectionResult(
-                success=False,
-                message='Hostapd configuration update not implemented. Please use NetworkManager.'
+            result = subprocess.run(
+                ['nmcli', '-t', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show'],
+                capture_output=True, text=True, timeout=10
             )
+            
+            ap_connections = []
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        parts = line.split(':')
+                        if len(parts) >= 3:
+                            name, conn_type, device = parts[0], parts[1], parts[2]
+                            # Look for wifi connections on our AP interface
+                            if conn_type == '802-11-wireless' and device == self.ap_interface:
+                                ap_connections.append(name)
+            
+            return ap_connections
             
         except Exception as e:
-            logger.error(f"Error updating hostapd configuration: {e}")
-            return ConnectionResult(
-                success=False,
-                message='Failed to update hostapd configuration'
-            )
+            logger.warning(f"Error finding AP connections: {e}")
+            return []
+    
