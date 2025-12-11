@@ -251,7 +251,7 @@ def restart_network():
 
 
 @api_bp.route('/system/update', methods=['POST'])
-@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_CRITICAL'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def update_system():
     """
     Update the system using the update script

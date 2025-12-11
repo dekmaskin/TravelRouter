@@ -70,7 +70,7 @@ class Config:
     RATE_LIMIT_CRITICAL = int(os.environ.get('RATE_LIMIT_CRITICAL', '5')) # System reboot, critical operations
     
     # IP blocking settings
-    IP_BLOCK_DURATION = int(os.environ.get('IP_BLOCK_DURATION', '120'))  # seconds
+    IP_BLOCK_DURATION = int(os.environ.get('IP_BLOCK_DURATION', '30'))  # seconds
     
     # Input Validation
     SSID_PATTERN = r'^[a-zA-Z0-9\s\-_\.]{1,32}$'
