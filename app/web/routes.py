@@ -236,6 +236,7 @@ def system_settings_page():
                              hotspot_config=hotspot_config,
                              features={
                                  'system_reboot': current_app.config['ENABLE_SYSTEM_REBOOT'],
+                                 'system_update': current_app.config['ENABLE_SYSTEM_UPDATE'],
                                  'qr_generation': current_app.config['ENABLE_QR_GENERATION'],
                                  'vpn_tunnel': current_app.config['ENABLE_VPN_TUNNEL']
                              })

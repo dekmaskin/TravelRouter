@@ -250,6 +250,36 @@ def restart_network():
         }), 500
 
 
+@api_bp.route('/system/update', methods=['POST'])
+@security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_CRITICAL'])
+def update_system():
+    """
+    Update the system using the update script
+    
+    Returns:
+        JSON response with update result
+    """
+    try:
+        logger.warning(f"System update requested from {request.remote_addr}")
+        
+        result = get_system_service().update_system()
+        return jsonify(result.to_dict())
+        
+    except SecurityError as e:
+        return jsonify({
+            'success': False,
+            'error': 'security_error',
+            'message': 'System update not permitted'
+        }), 403
+    except Exception as e:
+        logger.error(f"Error updating system: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'system_update_error',
+            'message': 'System update failed'
+        }), 500
+
+
 @api_bp.route('/system/logs', methods=['GET'])
 @security_manager.rate_limit(max_requests=lambda: current_app.config['RATE_LIMIT_NORMAL'])
 def get_system_logs():

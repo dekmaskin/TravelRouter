@@ -122,6 +122,62 @@ class SystemService:
                 message='Failed to restart network services'
             )
     
+    def update_system(self) -> SystemActionResult:
+        """
+        Update the system using the update script (without health check)
+        
+        Returns:
+            SystemActionResult object
+            
+        Raises:
+            SecurityError: If system update is not enabled
+        """
+        if not current_app.config['ENABLE_SYSTEM_UPDATE']:
+            security_logger.warning("System update attempt when feature is disabled")
+            raise SecurityError("System update is not enabled")
+        
+        try:
+            security_logger.warning("System update initiated")
+            
+            # Path to the update script
+            update_script = '/opt/travelnet/update.sh'
+            
+            # Check if update script exists
+            import os
+            if not os.path.exists(update_script):
+                logger.error(f"Update script not found at {update_script}")
+                return SystemActionResult(
+                    success=False,
+                    message='Update script not found'
+                )
+            
+            # Run the update script in the background
+            # We don't wait for completion as it may take a while and restart services
+            cmd = ['sudo', 'bash', update_script]
+            
+            # Start the process but don't wait for completion
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            logger.info(f"Update process started with PID: {process.pid}")
+            
+            return SystemActionResult(
+                success=True,
+                message='System update initiated. The update will run in the background and may restart services.',
+                details=f'Update process started with PID: {process.pid}'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error starting system update: {e}")
+            return SystemActionResult(
+                success=False,
+                message='Failed to start system update'
+            )
+    
     def get_system_logs(self, log_type: str = 'application', lines: int = 100) -> Dict[str, Any]:
         """
         Get system logs
@@ -268,6 +324,7 @@ class SystemService:
             # Add system information
             status['system'].update({
                 'reboot_enabled': current_app.config['ENABLE_SYSTEM_REBOOT'],
+                'update_enabled': current_app.config['ENABLE_SYSTEM_UPDATE'],
                 'qr_generation_enabled': current_app.config['ENABLE_QR_GENERATION'],
                 'vpn_tunnel_enabled': current_app.config['ENABLE_VPN_TUNNEL']
             })

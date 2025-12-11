@@ -309,6 +309,40 @@ class SystemSettingsManager {
         }
     }
 
+    async updateSystem() {
+        if (!confirm('Are you sure you want to update the system? This will download and install the latest version.')) {
+            return;
+        }
+
+        if (!confirm('The update process may restart services and take several minutes. Continue?')) {
+            return;
+        }
+
+        const btn = event.target.closest('button');
+        try {
+            setLoadingState(btn, true);
+
+            const response = await fetch('/api/v1/system/update', {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert('System update initiated. The update will run in the background and may restart services. Please wait a few minutes before checking the system status.', 'info');
+                // Refresh status after a delay to show update progress
+                setTimeout(() => this.refreshSystemStatus(), 10000);
+            } else {
+                showAlert(data.message || 'Failed to start system update', 'danger');
+            }
+        } catch (error) {
+            console.error('Error updating system:', error);
+            showAlert('Failed to start system update', 'danger');
+        } finally {
+            setLoadingState(btn, false);
+        }
+    }
+
     async rebootSystem() {
         if (!confirm('Are you sure you want to reboot the system? This will disconnect all users and restart the router.')) {
             return;
@@ -442,6 +476,12 @@ window.restartNetwork = () => {
 window.refreshNetworkStatus = () => {
     if (window.systemSettingsManager) {
         window.systemSettingsManager.refreshSystemStatus();
+    }
+};
+
+window.updateSystem = () => {
+    if (window.systemSettingsManager) {
+        window.systemSettingsManager.updateSystem();
     }
 };
 
