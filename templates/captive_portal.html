@@ -57,7 +57,7 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v={{ app_version }}"></script>
     <script>
         // Captive portal specific functionality
         class CaptivePortal {

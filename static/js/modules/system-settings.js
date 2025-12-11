@@ -122,10 +122,10 @@ class SystemSettingsManager {
             return;
         }
 
-        try {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            setLoadingState(submitBtn, true);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        setLoadingState(submitBtn, true);
 
+        try {
             const response = await fetch('/api/v1/hotspot/config', {
                 method: 'POST',
                 headers: {
@@ -136,20 +136,18 @@ class SystemSettingsManager {
 
             const data = await response.json();
 
-            if (data.success) {
-                showAlert(data.message || 'Hotspot configuration updated successfully', 'success');
-                // Refresh system status to show updated info
+            if (response.ok && data.success) {
+                showAlert('Hotspot configuration updated successfully', 'success');
                 setTimeout(() => this.refreshSystemStatus(), 2000);
             } else {
-                showAlert(data.message || 'Failed to update hotspot configuration', 'danger');
+                showAlert('Failed to update hotspot configuration: ' + (data.message || data.error || 'Unknown error'), 'danger');
             }
         } catch (error) {
             console.error('Error updating hotspot config:', error);
-            showAlert('Failed to update hotspot configuration', 'danger');
-        } finally {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            setLoadingState(submitBtn, false);
+            showAlert('Failed to update hotspot configuration: ' + error.message, 'danger');
         }
+        
+        setLoadingState(submitBtn, false);
     }
 
     togglePasswordVisibility() {

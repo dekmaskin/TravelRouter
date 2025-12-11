@@ -1,5 +1,6 @@
 // QR Code Generation Module
 import ApiClient from '../utils/api-client.js';
+import { showAlert, setLoadingState } from './ui-helpers.js';
 import UIHelpers from './ui-helpers.js';
 
 class QRGenerator {
@@ -51,12 +52,12 @@ class QRGenerator {
         const security = document.getElementById('qrSecurity').value;
 
         if (!ssid.trim()) {
-            UIHelpers.showError('Please enter a network name');
+            showAlert('Please enter a network name', 'warning');
             return;
         }
 
         const submitBtn = document.querySelector('#qrForm button[type="submit"]');
-        UIHelpers.setLoadingState(submitBtn, true, 'Generating...');
+        setLoadingState(submitBtn, true, 'Generating...');
 
         try {
             const data = { ssid, password, security };
@@ -65,13 +66,13 @@ class QRGenerator {
             if (result.success) {
                 this.displayQRCode(result.qr_code, ssid);
             } else {
-                UIHelpers.showError('QR generation failed: ' + result.message);
+                showAlert('QR generation failed: ' + (result.message || 'Unknown error'), 'danger');
             }
         } catch (error) {
             console.error('Error generating QR code:', error);
-            UIHelpers.showError('QR generation failed');
+            showAlert('QR generation failed', 'danger');
         } finally {
-            UIHelpers.setLoadingState(submitBtn, false);
+            setLoadingState(submitBtn, false);
         }
     }
 
@@ -187,7 +188,7 @@ class QRGenerator {
         const ssidField = document.getElementById('qrSSID');
         if (ssidField) {
             ssidField.focus();
-            UIHelpers.showAlert('Enter your custom network details above', 'info');
+            showAlert('Enter your custom network details above', 'info');
         }
     }
 }

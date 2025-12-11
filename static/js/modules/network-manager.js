@@ -1,5 +1,6 @@
 // Network Management Module
 import ApiClient from '../utils/api-client.js';
+import { showAlert, setLoadingState } from './ui-helpers.js';
 import UIHelpers from './ui-helpers.js';
 
 class NetworkManager {
@@ -74,11 +75,11 @@ class NetworkManager {
             if (data.success) {
                 this.displayNetworks(data.networks);
             } else {
-                UIHelpers.showError('Failed to scan networks: ' + data.message);
+                showAlert('Failed to scan networks: ' + (data.message || 'Unknown error'), 'danger');
             }
         } catch (error) {
             console.error('Error scanning networks:', error);
-            UIHelpers.showError('Network scan failed');
+            showAlert('Network scan failed', 'danger');
         } finally {
             this.isScanning = false;
             this.hideScanningState();
@@ -240,18 +241,18 @@ class NetworkManager {
                 result = await ApiClient.post('/api/v1/networks/disconnect');
                 
                 if (result.success) {
-                    UIHelpers.showSuccess(`Disconnected from ${ssid}!`);
+                    showAlert(`Disconnected from ${ssid}!`, 'success');
                 } else {
-                    UIHelpers.showError('Disconnection failed: ' + result.message);
+                    showAlert('Disconnection failed: ' + (result.message || 'Unknown error'), 'danger');
                 }
             } else {
                 const data = { ssid: ssid, password: password || '' };
                 result = await ApiClient.post('/api/v1/networks/connect', data);
                 
                 if (result.success) {
-                    UIHelpers.showSuccess(`Connected to ${ssid}!`);
+                    showAlert(`Connected to ${ssid}!`, 'success');
                 } else {
-                    UIHelpers.showError('Connection failed: ' + result.message);
+                    showAlert('Connection failed: ' + (result.message || 'Unknown error'), 'danger');
                 }
             }
             
@@ -269,10 +270,10 @@ class NetworkManager {
             
         } catch (error) {
             console.error('Error with network operation:', error);
-            UIHelpers.showError('Network operation failed');
+            showAlert('Network operation failed', 'danger');
         } finally {
             this.isConnecting = false;
-            UIHelpers.setLoadingState(connectBtn, false, originalText);
+            setLoadingState(connectBtn, false, originalText);
         }
     }
 
@@ -286,26 +287,26 @@ class NetworkManager {
         this.isConnecting = true;
         const disconnectBtn = document.getElementById('disconnectBtn');
         
-        UIHelpers.setLoadingState(disconnectBtn, true);
+        setLoadingState(disconnectBtn, true);
 
         try {
             const result = await ApiClient.post('/api/v1/networks/disconnect');
             
             if (result.success) {
-                UIHelpers.showSuccess('Disconnected successfully!');
+                showAlert('Disconnected successfully!', 'success');
                 setTimeout(() => {
                     this.updateConnectionStatus();
                     this.scanNetworks();
                 }, 1000);
             } else {
-                UIHelpers.showError('Disconnection failed: ' + result.message);
+                showAlert('Disconnection failed: ' + (result.message || 'Unknown error'), 'danger');
             }
         } catch (error) {
             console.error('Error disconnecting from network:', error);
-            UIHelpers.showError('Disconnection failed');
+            showAlert('Disconnection failed', 'danger');
         } finally {
             this.isConnecting = false;
-            UIHelpers.setLoadingState(disconnectBtn, false);
+            setLoadingState(disconnectBtn, false);
         }
     }
 }
