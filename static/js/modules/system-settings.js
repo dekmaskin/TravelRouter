@@ -126,18 +126,6 @@ class SystemSettingsManager {
         setLoadingState(submitBtn, true);
 
         try {
-            // First test if we can reach the GET endpoint
-            console.log('Testing GET request first...');
-            const testResponse = await fetch('/api/v1/hotspot/config');
-            console.log('GET test response:', testResponse.status);
-            
-            if (testResponse.ok) {
-                showAlert(`DEBUG: GET works. POST data: ${JSON.stringify(config)}`, 'info');
-            } else {
-                showAlert(`DEBUG: GET request failed with ${testResponse.status}`, 'warning');
-            }
-
-            console.log('Making hotspot config POST request with data:', config);
             const response = await fetch('/api/v1/hotspot/config', {
                 method: 'POST',
                 headers: {
@@ -145,14 +133,12 @@ class SystemSettingsManager {
                 },
                 body: JSON.stringify(config)
             });
-            console.log('POST Response received:', response.status);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
-            console.log('Response data:', data);
 
             if (data.success) {
                 showAlert('Hotspot configuration updated successfully', 'success');
@@ -162,7 +148,7 @@ class SystemSettingsManager {
             }
         } catch (error) {
             console.error('Error updating hotspot config:', error);
-            showAlert('DEBUG: Error details - ' + error.message, 'danger');
+            showAlert('Failed to update hotspot configuration: ' + error.message, 'danger');
         }
         
         setLoadingState(submitBtn, false);

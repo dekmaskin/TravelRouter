@@ -86,8 +86,13 @@ class SecurityManager:
                     
                     # Validate password (only for network requests)
                     if 'password' in data and data['password']:
-                        if not self._validate_password(data['password']):
-                            raise BadRequest("Invalid password format or length")
+                        # For hotspot config, be more lenient with password requirements
+                        if request.endpoint == 'api.update_hotspot_config':
+                            if len(data['password']) > 63:
+                                raise BadRequest("Password must be 63 characters or less")
+                        else:
+                            if not self._validate_password(data['password']):
+                                raise BadRequest("Invalid password format or length")
                     
                     # Validate config_name (for VPN requests)
                     if 'config_name' in data:
