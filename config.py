@@ -1,50 +1,61 @@
 """
-Configuration settings for the Travel Router Portal
+Legacy Configuration Module
+
+This module provides backward compatibility for the old monolithic app.py.
+For new development, use app.core.config instead.
 """
-import os
-from pathlib import Path
+
+import warnings
+from app.core.config import Config
+
+# Issue deprecation warning
+warnings.warn(
+    "config.py is deprecated. Use app.core.config.Config instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
+# Export configuration for backward compatibility
+_config = Config()
 
 # Application Configuration
-APP_NAME = "TravelNet Portal"  # Change this to customize your portal name
-APP_VERSION = "1.0.0"
-SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
+APP_NAME = _config.APP_NAME
+APP_VERSION = _config.APP_VERSION
+SECRET_KEY = _config.SECRET_KEY
 
 # Network Configuration
-WIFI_INTERFACE = os.environ.get('WIFI_INTERFACE', 'wlan1')  # External WiFi interface
-AP_INTERFACE = os.environ.get('AP_INTERFACE', 'wlan0')     # Access Point interface
-ETHERNET_INTERFACE = os.environ.get('ETH_INTERFACE', 'eth0')
+WIFI_INTERFACE = _config.WIFI_INTERFACE
+AP_INTERFACE = _config.AP_INTERFACE
+ETHERNET_INTERFACE = _config.ETHERNET_INTERFACE
 
 # File Paths
-BASE_DIR = Path(__file__).parent
-STATIC_DIR = BASE_DIR / 'static'
-TEMPLATES_DIR = BASE_DIR / 'templates'
-LOGS_DIR = BASE_DIR / 'logs'
-
-# Ensure directories exist
-LOGS_DIR.mkdir(exist_ok=True)
-STATIC_DIR.mkdir(exist_ok=True)
-TEMPLATES_DIR.mkdir(exist_ok=True)
+BASE_DIR = _config.BASE_DIR
+STATIC_DIR = _config.STATIC_DIR
+TEMPLATES_DIR = _config.TEMPLATES_DIR
+LOGS_DIR = _config.LOGS_DIR
 
 # Logging Configuration
-LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-LOG_FILE = LOGS_DIR / 'travelnet.log'
+LOG_LEVEL = _config.LOG_LEVEL
+LOG_FILE = _config.LOG_FILE
 
-# Security
-ALLOWED_HOSTS = ['192.168.4.1', 'localhost', '127.0.0.1']  # Add your Pi's AP IP
+# Security Configuration
+ALLOWED_HOSTS = _config.ALLOWED_HOSTS
+MAX_REQUESTS_PER_MINUTE = _config.MAX_REQUESTS_PER_MINUTE
+MAX_CONNECTION_ATTEMPTS = _config.MAX_CONNECTION_ATTEMPTS
 
-# VPN Configuration
-SUPPORTED_VPN_TYPES = ['openvpn', 'wireguard']
-VPN_CONFIG_DIR = BASE_DIR / 'vpn_configs'
-VPN_CONFIG_DIR.mkdir(exist_ok=True)
+# System Commands
+ALLOWED_SYSTEM_COMMANDS = _config.ALLOWED_SYSTEM_COMMANDS
 
-# System Commands (for security, we'll validate these)
-ALLOWED_SYSTEM_COMMANDS = {
-    'reboot': ['sudo', 'reboot'],
-    'wifi_scan': ['nmcli', '--colors', 'no', '-m', 'multiline', '--get-value', 'SSID,SECURITY', 'dev', 'wifi', 'list'],
-    'wifi_connect': ['nmcli', '--colors', 'no', 'device', 'wifi', 'connect'],
-    'wifi_status': ['nmcli', '--colors', 'no', 'device', 'status'],
-    'enable_ssh': ['sudo', 'systemctl', 'enable', 'ssh'],
-    'start_ssh': ['sudo', 'systemctl', 'start', 'ssh'],
-    'stop_ssh': ['sudo', 'systemctl', 'stop', 'ssh'],
-    'ssh_status': ['sudo', 'systemctl', 'is-active', 'ssh']
-}
+# Input validation
+SSID_PATTERN = _config.SSID_PATTERN
+PASSWORD_MIN_LENGTH = _config.PASSWORD_MIN_LENGTH
+PASSWORD_MAX_LENGTH = _config.PASSWORD_MAX_LENGTH
+
+# Default network settings
+DEFAULT_AP_SSID = _config.DEFAULT_AP_SSID
+DEFAULT_AP_PASSWORD = _config.DEFAULT_AP_PASSWORD
+
+# Feature flags
+ENABLE_SSH_MANAGEMENT = _config.ENABLE_SSH_MANAGEMENT
+ENABLE_SYSTEM_REBOOT = _config.ENABLE_SYSTEM_REBOOT
+ENABLE_QR_GENERATION = _config.ENABLE_QR_GENERATION

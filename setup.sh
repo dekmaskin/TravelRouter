@@ -70,7 +70,7 @@ fi
 
 echo "Step 6: Copying application files..."
 cp -r . $APP_DIR/
-chown -R pi:pi $APP_DIR
+chown -R johan:johan $APP_DIR
 chmod +x $APP_DIR/setup.sh
 
 echo "Step 7: Configuring hostapd (Access Point)..."
@@ -155,7 +155,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
+User=johan
 WorkingDirectory=$APP_DIR
 Environment=PATH=$APP_DIR/venv/bin
 ExecStart=$APP_DIR/venv/bin/python app.py

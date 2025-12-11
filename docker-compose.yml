@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  travelnet:
+    build: .
+    container_name: travelnet-portal
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_NAME=${APP_NAME:-TravelNet Portal}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WIFI_INTERFACE=${WIFI_INTERFACE:-wlan1}
+      - AP_INTERFACE=${AP_INTERFACE:-wlan0}
+      - ETH_INTERFACE=${ETH_INTERFACE:-eth0}
+      - DEFAULT_AP_SSID=${DEFAULT_AP_SSID:-TravelNet-Portal}
+      - DEFAULT_AP_PASSWORD=${DEFAULT_AP_PASSWORD:-TravelNet2024!}
+      - DEBUG=${DEBUG:-false}
+      - TESTING=${TESTING:-false}
+      - ENABLE_SSH_MANAGEMENT=${ENABLE_SSH_MANAGEMENT:-true}
+      - ENABLE_SYSTEM_REBOOT=${ENABLE_SYSTEM_REBOOT:-true}
+      - ENABLE_QR_GENERATION=${ENABLE_QR_GENERATION:-true}
+      - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-60}
+      - MAX_CONNECTION_ATTEMPTS=${MAX_CONNECTION_ATTEMPTS:-5}
+    volumes:
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+      - /etc/NetworkManager:/etc/NetworkManager:ro
+    devices:
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

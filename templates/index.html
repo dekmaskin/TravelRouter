@@ -1,390 +1,116 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <!-- System Status -->
-    <div class="col-md-4 mb-4">
-        <div class="card status-card h-100">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-server me-2"></i>System Status</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <strong>SSH Access:</strong>
-                    <span class="badge bg-{{ 'success' if ssh_active else 'danger' }} ms-2">
-                        {{ 'Active' if ssh_active else 'Inactive' }}
-                    </span>
+<!-- Connection Status Header -->
+<div class="connection-status-header mb-3" id="connectionStatus">
+    <div class="card mobile-card">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+                <div class="connection-icon me-3" id="connectionIcon">
+                    <i class="fas fa-wifi text-secondary fa-lg"></i>
                 </div>
-                
-                <div class="mb-3">
-                    <strong>Network Interfaces:</strong>
-                    <div class="mt-2">
-                        {% for device, info in connection_status.items() %}
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small><strong>{{ device }}:</strong></small>
-                            <span class="badge bg-{{ 'success' if info.state == 'connected' else 'secondary' }}">
-                                {{ info.state }}
-                            </span>
-                        </div>
-                        {% if info.connection != 'Not connected' %}
-                        <div class="text-muted small mb-2">{{ info.connection }}</div>
-                        {% endif %}
-                        {% endfor %}
+                <div class="flex-grow-1">
+                    <div class="connection-name" id="connectionName">Checking Connection...</div>
+                    <div class="connection-details">
+                        <span class="status-badge disconnected" id="connectionBadge">Checking status</span>
                     </div>
                 </div>
-                
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary btn-custom" onclick="refreshStatus()">
-                        <i class="fas fa-sync-alt me-1"></i>Refresh Status
-                        <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                    </button>
+                <div class="connection-signal" id="connectionSignal">
+                    <i class="fas fa-question text-secondary"></i>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- WiFi Networks -->
-    <div class="col-md-8 mb-4">
-        <div class="card status-card h-100">
-            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-wifi me-2"></i>Available Networks</h5>
-                <button class="btn btn-light btn-sm" onclick="scanNetworks()">
-                    <i class="fas fa-search me-1"></i>Scan
-                    <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="networks-list">
-                    {% if networks %}
-                        {% for network in networks %}
-                        <div class="network-item p-3" data-ssid="{{ network.ssid }}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center">
-                                        <strong class="me-2">{{ network.ssid }}</strong>
-                                        <span class="badge bg-{{ 'warning' if network.security != 'Open' else 'success' }}">
-                                            {{ network.security }}
-                                        </span>
-                                    </div>
-                                    <div class="d-flex align-items-center mt-1">
-                                        <div class="signal-strength me-2">
-                                            {% set signal_bars = (network.signal // 25) + 1 %}
-                                            {% for i in range(1, 5) %}
-                                                <i class="fas fa-signal text-{{ 'success' if i <= signal_bars else 'muted' }}"></i>
-                                            {% endfor %}
-                                        </div>
-                                        <small class="text-muted">{{ network.signal }}%</small>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary btn-sm btn-custom" onclick="showConnectModal('{{ network.ssid }}', '{{ network.security }}')">
-                                    <i class="fas fa-plug me-1"></i>Connect
-                                </button>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions mb-4">
+    <div class="row g-2">
+        <div class="col-6">
+            <button class="btn btn-primary btn-lg w-100 action-btn" onclick="scanNetworks()">
+                <i class="fas fa-search fa-lg mb-1"></i>
+                <div>Scan WiFi</div>
+                <div class="spinner-border spinner-border-sm loading"></div>
+            </button>
+        </div>
+        <div class="col-6">
+            <a href="{{ url_for('web.qr_connect_page') }}" class="btn btn-info btn-lg w-100 action-btn">
+                <i class="fas fa-qrcode fa-lg mb-1"></i>
+                <div>QR Connect</div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- WiFi Networks -->
+<div class="card mobile-card mb-4">
+    <div class="card-header mobile-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-wifi me-2"></i>Available Networks</h6>
+            <button class="btn btn-outline-light btn-sm" onclick="scanNetworks()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div id="networksList">
+            {% if networks %}
+                {% for network in networks %}
+                <div class="network-item {{ 'connected' if network.ssid == current_ssid else '' }}" 
+                     data-ssid="{{ network.ssid }}" 
+                     data-security="{{ network.security }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="network-name">
+                                {{ network.ssid }}
+                                {% if network.ssid == current_ssid %}
+                                <span class="badge bg-success ms-2">Connected</span>
+                                {% endif %}
+                            </div>
+                            <div class="network-security">
+                                <i class="fas fa-{{ 'unlock' if network.security == 'Open' else 'lock' }} me-1"></i>
+                                {{ network.security }}
                             </div>
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-search fa-2x mb-3"></i>
-                            <p>No networks found. Click "Scan" to search for available networks.</p>
+                        <div class="signal-strength {{ 'signal-excellent' if network.signal_strength >= -50 else 'signal-good' if network.signal_strength >= -60 else 'signal-fair' if network.signal_strength >= -70 else 'signal-poor' }}">
+                            <i class="fas fa-signal"></i>
                         </div>
-                    {% endif %}
+                    </div>
                 </div>
-            </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-search fa-2x mb-3"></i>
+                    <p>No networks found. Try scanning again.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- System Controls -->
-<div class="row">
-    <div class="col-12">
+<!-- System Status -->
+{% if system_status %}
+<div class="row mb-4">
+    <div class="col-md-6">
         <div class="card status-card">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>System Controls</h5>
+            <div class="card-body text-center">
+                <i class="fas fa-microchip fa-2x text-info mb-2"></i>
+                <h6>System Status</h6>
+                <p class="text-muted mb-0">{{ 'Running' if system_status.success else 'Error' }}</p>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-2">
-                        <button class="btn btn-outline-success btn-custom w-100" onclick="toggleSSH()">
-                            <i class="fas fa-terminal me-1"></i>
-                            {{ 'Disable SSH' if ssh_active else 'Enable SSH' }}
-                            <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                        </button>
-                    </div>
-                    <div class="col-md-3 mb-2">
-                        <button class="btn btn-outline-danger btn-custom w-100" onclick="confirmReboot()">
-                            <i class="fas fa-power-off me-1"></i>Reboot System
-                            <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                        </button>
-                    </div>
-                    <div class="col-md-3 mb-2">
-                        <a href="{{ url_for('qr_connect_page') }}" class="btn btn-outline-info btn-custom w-100">
-                            <i class="fas fa-qrcode me-1"></i>QR Connect
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-2">
-                        <button class="btn btn-outline-secondary btn-custom w-100" onclick="refreshStatus()">
-                            <i class="fas fa-sync-alt me-1"></i>Refresh All
-                            <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                        </button>
-                    </div>
-                </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card status-card">
+            <div class="card-body text-center">
+                <i class="fas fa-{{ 'wifi' if connection_status.connected else 'wifi-slash' }} fa-2x {{ 'text-success' if connection_status.connected else 'text-danger' }} mb-2"></i>
+                <h6>Connection</h6>
+                <p class="text-muted mb-0">{{ 'Connected' if connection_status.connected else 'Disconnected' }}</p>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 
-<!-- Connect Modal -->
-<div class="modal fade" id="connectModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Connect to WiFi</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="connectForm">
-                    <div class="mb-3">
-                        <label for="modalSSID" class="form-label">Network Name (SSID)</label>
-                        <input type="text" class="form-control" id="modalSSID" readonly>
-                    </div>
-                    <div class="mb-3" id="passwordGroup">
-                        <label for="modalPassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="modalPassword" placeholder="Enter network password">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="connectToNetwork()">
-                    <i class="fas fa-plug me-1"></i>Connect
-                    <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Reboot Confirmation Modal -->
-<div class="modal fade" id="rebootModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Reboot</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Warning:</strong> This will reboot the system and temporarily disconnect all users.</p>
-                <p>Are you sure you want to continue?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="rebootSystem()">
-                    <i class="fas fa-power-off me-1"></i>Reboot Now
-                    <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-let connectModal, rebootModal;
-
-document.addEventListener('DOMContentLoaded', function() {
-    connectModal = new bootstrap.Modal(document.getElementById('connectModal'));
-    rebootModal = new bootstrap.Modal(document.getElementById('rebootModal'));
-});
-
-function showConnectModal(ssid, security) {
-    document.getElementById('modalSSID').value = ssid;
-    const passwordGroup = document.getElementById('passwordGroup');
-    
-    if (security === 'Open' || security === '--') {
-        passwordGroup.style.display = 'none';
-    } else {
-        passwordGroup.style.display = 'block';
-        document.getElementById('modalPassword').focus();
-    }
-    
-    connectModal.show();
-}
-
-function connectToNetwork() {
-    const button = event.target;
-    const ssid = document.getElementById('modalSSID').value;
-    const password = document.getElementById('modalPassword').value;
-    
-    showLoading(button);
-    
-    fetch('/connect', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            ssid: ssid,
-            password: password
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading(button);
-        if (data.success) {
-            showAlert(data.message, 'success');
-            connectModal.hide();
-            setTimeout(refreshStatus, 2000);
-        } else {
-            showAlert(data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        hideLoading(button);
-        showAlert('Connection failed: ' + error.message, 'danger');
-    });
-}
-
-function scanNetworks() {
-    const button = event.target;
-    showLoading(button);
-    
-    fetch('/scan')
-    .then(response => response.json())
-    .then(data => {
-        hideLoading(button);
-        if (data.success) {
-            updateNetworksList(data.networks);
-            showAlert('Network scan completed', 'success');
-        } else {
-            showAlert('Scan failed: ' + data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        hideLoading(button);
-        showAlert('Scan failed: ' + error.message, 'danger');
-    });
-}
-
-function updateNetworksList(networks) {
-    const networksList = document.getElementById('networks-list');
-    
-    if (networks.length === 0) {
-        networksList.innerHTML = `
-            <div class="text-center text-muted py-4">
-                <i class="fas fa-search fa-2x mb-3"></i>
-                <p>No networks found.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    networksList.innerHTML = networks.map(network => `
-        <div class="network-item p-3" data-ssid="${network.ssid}">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="flex-grow-1">
-                    <div class="d-flex align-items-center">
-                        <strong class="me-2">${network.ssid}</strong>
-                        <span class="badge bg-${network.security !== 'Open' ? 'warning' : 'success'}">
-                            ${network.security}
-                        </span>
-                    </div>
-                    <div class="d-flex align-items-center mt-1">
-                        <div class="signal-strength me-2">
-                            ${generateSignalBars(network.signal)}
-                        </div>
-                        <small class="text-muted">${network.signal}%</small>
-                    </div>
-                </div>
-                <button class="btn btn-primary btn-sm btn-custom" onclick="showConnectModal('${network.ssid}', '${network.security}')">
-                    <i class="fas fa-plug me-1"></i>Connect
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function generateSignalBars(signal) {
-    const bars = Math.floor(signal / 25) + 1;
-    let html = '';
-    for (let i = 1; i <= 4; i++) {
-        const className = i <= bars ? 'text-success' : 'text-muted';
-        html += `<i class="fas fa-signal ${className}"></i>`;
-    }
-    return html;
-}
-
-function refreshStatus() {
-    const button = event.target;
-    showLoading(button);
-    
-    fetch('/status')
-    .then(response => response.json())
-    .then(data => {
-        hideLoading(button);
-        if (data.success) {
-            location.reload(); // Simple refresh for now
-        } else {
-            showAlert('Status refresh failed: ' + data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        hideLoading(button);
-        showAlert('Status refresh failed: ' + error.message, 'danger');
-    });
-}
-
-function toggleSSH() {
-    const button = event.target;
-    const isActive = button.textContent.includes('Disable');
-    const action = isActive ? 'ssh_disable' : 'ssh_enable';
-    
-    showLoading(button);
-    
-    fetch(`/system/${action}`, {
-        method: 'POST'
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading(button);
-        if (data.success) {
-            showAlert(data.message, 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showAlert('SSH operation failed: ' + data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        hideLoading(button);
-        showAlert('SSH operation failed: ' + error.message, 'danger');
-    });
-}
-
-function confirmReboot() {
-    rebootModal.show();
-}
-
-function rebootSystem() {
-    const button = event.target;
-    showLoading(button);
-    
-    fetch('/system/reboot', {
-        method: 'POST'
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading(button);
-        if (data.success) {
-            showAlert('System is rebooting... This page will be unavailable for a few minutes.', 'warning');
-            rebootModal.hide();
-        } else {
-            showAlert('Reboot failed: ' + data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        hideLoading(button);
-        showAlert('Reboot failed: ' + error.message, 'danger');
-    });
-}
-</script>
 {% endblock %}

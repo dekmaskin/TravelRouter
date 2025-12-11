@@ -7,8 +7,8 @@ set -e
 
 # Configuration
 PI_HOST="10.10.10.60"
-PI_USER="pi"
-REMOTE_DIR="/home/pi/travelnet-portal"
+PI_USER="johan"
+REMOTE_DIR="/home/johan/travelnet-portal"
 LOCAL_DIR="."
 
 echo "========================================="

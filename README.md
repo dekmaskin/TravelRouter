@@ -1,34 +1,112 @@
 # TravelNet Portal
 
-A professional travel router management application for Raspberry Pi that provides a web-based interface for connecting to public WiFi networks, managing system settings, and generating QR codes for easy network sharing.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Flask](https://img.shields.io/badge/flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
 
-## Features
+A professional, secure travel router management application that transforms your Raspberry Pi into a powerful WiFi bridge with an intuitive web interface. Perfect for travelers, digital nomads, and anyone needing reliable internet connectivity on the go.
 
-- 🌐 **WiFi Management**: Scan and connect to available WiFi networks
-- 📱 **QR Code Generation**: Create QR codes for easy WiFi sharing
-- 🔧 **System Controls**: Reboot system, manage SSH access
-- 📊 **Network Status**: Real-time connection monitoring
-- 🎨 **Modern UI**: Responsive Bootstrap-based interface
-- 🔒 **Security**: Input validation and secure command execution
-- 📝 **Logging**: Comprehensive application logging
+## 🌟 Key Features
 
-## Project Structure
+- **🔐 Security-First Design**: Rate limiting, input validation, secure session management
+- **📱 Mobile-Optimized Interface**: Responsive design that works perfectly on all devices  
+- **🌐 WiFi Bridge Functionality**: Connect to public WiFi and share via your own access point
+- **📊 Real-Time Monitoring**: Live connection status and network diagnostics
+- **🔧 System Management**: Remote reboot, SSH control, and service management
+- **📱 QR Code Generation & Scanning**: Create and scan QR codes for easy WiFi sharing
+- **🛡️ Production Ready**: Comprehensive logging, error handling, and security features
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Raspberry Pi 3B+ or newer
+- Raspberry Pi OS (Bullseye or newer)
+- Two WiFi interfaces (built-in + USB adapter) OR Ethernet + WiFi
+- SSH access to your Raspberry Pi
+
+### One-Command Installation
+```bash
+# Download and run the secure setup script
+curl -sSL https://raw.githubusercontent.com/your-repo/travelnet-portal/main/setup-secure.sh | sudo bash
+```
+
+### Manual Installation
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-repo/travelnet-portal.git
+   cd travelnet-portal
+   ```
+
+2. **Run the secure setup:**
+   ```bash
+   chmod +x setup-secure.sh
+   sudo ./setup-secure.sh
+   ```
+
+3. **Access your portal:**
+   - Connect to the `TravelNet-Portal` WiFi network
+   - Open `http://192.168.4.1` in your browser
+   - Configure your internet connection
+
+## 📱 QR Code Features
+
+### Generate QR Codes
+- Create QR codes for any WiFi network
+- Support for WPA/WPA2, WEP, and open networks
+- Download or print QR codes for easy sharing
+
+### Scan QR Codes
+- **Camera Scanning**: Use your device's camera to scan WiFi QR codes
+- **File Upload**: Upload QR code images from your device
+- **Auto-Connect**: Automatically connect to scanned networks
+- **Cross-Platform**: Works on phones, tablets, and computers
+
+**Supported QR Code Format**: Standard WiFi QR codes (`WIFI:T:WPA;S:NetworkName;P:Password;;`)
+
+## 🏗️ Architecture
+
+TravelNet Portal v2.0 features a modern, enterprise-grade modular architecture:
 
 ```
 travelnet-portal/
-├── app.py                 # Main Flask application
-├── config.py             # Configuration settings
-├── requirements.txt      # Python dependencies
-├── setup.sh             # Raspberry Pi setup script
-├── templates/           # HTML templates
-│   ├── base.html        # Base template
-│   ├── index.html       # Main dashboard
-│   ├── qr_connect.html  # QR code generation page
-│   └── error.html       # Error page
-├── static/              # Static files (created automatically)
-├── logs/                # Application logs (created automatically)
-└── vpn_configs/         # VPN configuration files (created automatically)
+├── run.py                   # Application entry point
+├── app/                     # Main application package
+│   ├── __init__.py         # Application factory
+│   ├── core/               # Core functionality
+│   │   ├── config.py       # Configuration management
+│   │   ├── security.py     # Security & rate limiting
+│   │   ├── logging.py      # Structured logging
+│   │   └── errors.py       # Error handling
+│   ├── services/           # Business logic layer
+│   │   ├── network_service.py  # WiFi operations
+│   │   ├── system_service.py   # System management
+│   │   └── qr_service.py       # QR code generation
+│   ├── api/                # RESTful API endpoints
+│   │   └── routes.py       # API v1 routes
+│   ├── web/                # Web interface
+│   │   └── routes.py       # Dashboard routes
+│   └── system/             # Legacy compatibility
+│       └── routes.py       # Backward compatibility
+├── templates/              # HTML templates
+├── static/                 # Static files
+├── logs/                   # Application logs
+├── setup-secure.sh         # Production setup script
+├── requirements.txt        # Python dependencies
+├── Dockerfile             # Container deployment
+├── docker-compose.yml     # Container orchestration
+├── SECURITY.md            # Security documentation
+└── DEPLOYMENT.md          # Deployment guide
 ```
+
+### Key Improvements in v2.0
+
+- **🏛️ Modular Architecture**: Separation of concerns with clear layers
+- **🔒 Security First**: Rate limiting, input validation, CSRF protection
+- **📡 RESTful API**: Versioned API with comprehensive documentation
+- **🛡️ Error Handling**: Comprehensive error handling and structured logging
+- **🧪 Testability**: Modular design enables easy unit testing
+- **📈 Scalability**: Blueprint-based architecture for easy extension
+- **🐳 Containerization**: Docker support for consistent deployments
 
 ## Quick Start
 
@@ -195,10 +273,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/travelnet-portal
-Environment=PATH=/home/pi/travelnet-portal/venv/bin
-ExecStart=/home/pi/travelnet-portal/venv/bin/python app.py
+User=johan
+WorkingDirectory=/home/johan/travelnet-portal
+Environment=PATH=/home/johan/travelnet-portal/venv/bin
+ExecStart=/home/johan/travelnet-portal/venv/bin/python app.py
 Restart=always
 RestartSec=10
 

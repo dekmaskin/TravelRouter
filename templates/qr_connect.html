@@ -49,11 +49,11 @@
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <button type="button" class="btn btn-primary btn-custom" onclick="generateQR()">
+                        <button type="submit" class="btn btn-primary btn-custom">
                             <i class="fas fa-qrcode me-1"></i>Generate QR Code
-                            <div class="spinner-border spinner-border-sm loading ms-2"></div>
+                            <span class="spinner-border spinner-border-sm ms-2 loading" style="display: none;"></span>
                         </button>
-                        <button type="button" class="btn btn-outline-secondary btn-custom" onclick="clearForm()">
+                        <button type="button" class="btn btn-outline-secondary btn-custom" onclick="portal.clearQRForm()">
                             <i class="fas fa-eraser me-1"></i>Clear
                         </button>
                     </div>
@@ -72,7 +72,7 @@
             </div>
             <div class="card-body text-center">
                 <div id="qrCodeDisplay" class="mb-3"></div>
-                <div class="alert alert-info">
+                <div class="alert alert-info alert-custom">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong>Instructions:</strong> Point your phone's camera at the QR code or use a QR code scanner app. 
                     Your device should automatically prompt to connect to the WiFi network.
@@ -81,10 +81,10 @@
                     <small class="text-muted">WiFi String: <code id="wifiString"></code></small>
                 </div>
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button class="btn btn-outline-primary btn-custom" onclick="downloadQR()">
+                    <button class="btn btn-outline-primary btn-custom" onclick="portal.downloadQRCode()">
                         <i class="fas fa-download me-1"></i>Download QR Code
                     </button>
-                    <button class="btn btn-outline-secondary btn-custom" onclick="printQR()">
+                    <button class="btn btn-outline-secondary btn-custom" onclick="portal.printQRCode()">
                         <i class="fas fa-print me-1"></i>Print QR Code
                     </button>
                 </div>
@@ -106,17 +106,17 @@
                 </p>
                 <div class="row">
                     <div class="col-md-4 mb-2">
-                        <button class="btn btn-outline-info btn-custom w-100" onclick="quickConnect('Guest', '', 'nopass')">
+                        <button class="btn btn-outline-info btn-custom w-100" onclick="portal.quickConnect('Guest', '', 'nopass')">
                             <i class="fas fa-users me-1"></i>Guest Network
                         </button>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <button class="btn btn-outline-success btn-custom w-100" onclick="quickConnect('Free-WiFi', '', 'nopass')">
+                        <button class="btn btn-outline-success btn-custom w-100" onclick="portal.quickConnect('Free-WiFi', '', 'nopass')">
                             <i class="fas fa-wifi me-1"></i>Free WiFi
                         </button>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <button class="btn btn-outline-primary btn-custom w-100" onclick="showCustomModal()">
+                        <button class="btn btn-outline-primary btn-custom w-100" onclick="portal.focusSSIDField()">
                             <i class="fas fa-cog me-1"></i>Custom Network
                         </button>
                     </div>
@@ -125,215 +125,8 @@
         </div>
     </div>
 </div>
-
-<!-- Camera Scanner Section -->
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card status-card">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Scan QR Code</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">
-                    Scan a WiFi QR code to automatically connect to the network:
-                </p>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-secondary btn-custom" onclick="startScanner()">
-                        <i class="fas fa-camera me-1"></i>Start Camera Scanner
-                        <div class="spinner-border spinner-border-sm loading ms-2"></div>
-                    </button>
-                </div>
-                <div id="scannerResult" class="mt-3" style="display: none;">
-                    <div class="alert alert-success">
-                        <strong>Scanned Network:</strong> <span id="scannedSSID"></span>
-                        <button class="btn btn-sm btn-success ms-2" onclick="connectScannedNetwork()">Connect</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-let currentQRData = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle security type change
-    document.getElementById('qrSecurity').addEventListener('change', function() {
-        const passwordField = document.getElementById('passwordField');
-        if (this.value === 'nopass') {
-            passwordField.style.display = 'none';
-        } else {
-            passwordField.style.display = 'block';
-        }
-    });
-    
-    // Handle show password toggle
-    document.getElementById('showPassword').addEventListener('change', function() {
-        const passwordInput = document.getElementById('qrPassword');
-        passwordInput.type = this.checked ? 'text' : 'password';
-    });
-});
-
-function generateQR() {
-    const button = event.target;
-    const ssid = document.getElementById('qrSSID').value.trim();
-    const password = document.getElementById('qrPassword').value;
-    const security = document.getElementById('qrSecurity').value;
-    
-    if (!ssid) {
-        showAlert('Please enter a network name (SSID)', 'warning');
-        return;
-    }
-    
-    showLoading(button);
-    
-    fetch('/generate-qr', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            ssid: ssid,
-            password: password,
-            security: security
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading(button);
-        if (data.success) {
-            displayQRCode(data.qr_code, data.wifi_string);
-            showAlert('QR code generated successfully!', 'success');
-        } else {
-            showAlert('Failed to generate QR code: ' + data.message, 'danger');
-        }
-    })
-    .catch(error => {
-        hideLoading(button);
-        showAlert('Error generating QR code: ' + error.message, 'danger');
-    });
-}
-
-function displayQRCode(qrCodeData, wifiString) {
-    const qrDisplay = document.getElementById('qrCodeDisplay');
-    const wifiStringElement = document.getElementById('wifiString');
-    const qrResult = document.getElementById('qrResult');
-    
-    qrDisplay.innerHTML = `<img src="${qrCodeData}" alt="WiFi QR Code" class="img-fluid" style="max-width: 300px;">`;
-    wifiStringElement.textContent = wifiString;
-    qrResult.style.display = 'block';
-    
-    currentQRData = qrCodeData;
-    
-    // Scroll to QR code
-    qrResult.scrollIntoView({ behavior: 'smooth' });
-}
-
-function clearForm() {
-    document.getElementById('qrForm').reset();
-    document.getElementById('qrResult').style.display = 'none';
-    document.getElementById('passwordField').style.display = 'block';
-    currentQRData = null;
-}
-
-function quickConnect(ssid, password, security) {
-    document.getElementById('qrSSID').value = ssid;
-    document.getElementById('qrPassword').value = password;
-    document.getElementById('qrSecurity').value = security;
-    
-    // Trigger security change event
-    document.getElementById('qrSecurity').dispatchEvent(new Event('change'));
-    
-    // Auto-generate QR code
-    generateQR();
-}
-
-function downloadQR() {
-    if (!currentQRData) {
-        showAlert('No QR code to download', 'warning');
-        return;
-    }
-    
-    const link = document.createElement('a');
-    link.download = 'wifi-qr-code.png';
-    link.href = currentQRData;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showAlert('QR code downloaded!', 'success');
-}
-
-function printQR() {
-    if (!currentQRData) {
-        showAlert('No QR code to print', 'warning');
-        return;
-    }
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>WiFi QR Code</title>
-                <style>
-                    body { 
-                        display: flex; 
-                        justify-content: center; 
-                        align-items: center; 
-                        min-height: 100vh; 
-                        margin: 0; 
-                        font-family: Arial, sans-serif;
-                    }
-                    .print-container {
-                        text-align: center;
-                    }
-                    img {
-                        max-width: 400px;
-                        height: auto;
-                    }
-                    h2 {
-                        margin-bottom: 20px;
-                        color: #333;
-                    }
-                    p {
-                        margin-top: 20px;
-                        color: #666;
-                        font-size: 14px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="print-container">
-                    <h2>WiFi QR Code</h2>
-                    <img src="${currentQRData}" alt="WiFi QR Code">
-                    <p>Scan with your phone's camera to connect</p>
-                    <p>Network: ${document.getElementById('qrSSID').value}</p>
-                </div>
-            </body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-}
-
-function showCustomModal() {
-    // For now, just focus on the SSID field
-    document.getElementById('qrSSID').focus();
-    showAlert('Enter your custom network details above', 'info');
-}
-
-function startScanner() {
-    // This would require additional camera/QR scanning libraries
-    // For now, show a placeholder message
-    showAlert('Camera scanner feature coming soon! For now, manually enter network details above.', 'info');
-}
-
-function connectScannedNetwork() {
-    // Placeholder for connecting to scanned network
-    showAlert('Connecting to scanned network...', 'info');
-}
-</script>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 {% endblock %}

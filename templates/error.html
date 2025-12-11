@@ -1,27 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}Error - {{ app_name }}{% endblock %}
+{% block title %}{{ error }} - {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card status-card">
             <div class="card-header bg-danger text-white text-center">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Error</h5>
+                <h4 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>{{ error or 'Error' }}
+                </h4>
             </div>
             <div class="card-body text-center">
                 <div class="mb-4">
                     <i class="fas fa-exclamation-circle fa-4x text-danger mb-3"></i>
-                    <h4>Oops! Something went wrong</h4>
-                    <p class="text-muted">{{ error }}</p>
+                    <p class="lead">{{ message or 'An error occurred while processing your request.' }}</p>
                 </div>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-custom">
-                        <i class="fas fa-home me-1"></i>Back to Dashboard
+                    <a href="{{ url_for('web.index') }}" class="btn btn-primary btn-custom">
+                        <i class="fas fa-home me-1"></i>Go to Dashboard
                     </a>
-                    <button class="btn btn-outline-secondary btn-custom" onclick="window.location.reload()">
-                        <i class="fas fa-sync-alt me-1"></i>Retry
+                    <button class="btn btn-outline-secondary btn-custom" onclick="history.back()">
+                        <i class="fas fa-arrow-left me-1"></i>Go Back
                     </button>
                 </div>
             </div>
