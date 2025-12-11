@@ -133,6 +133,17 @@ echo "  - Updating management scripts..."
 cp $TEMP_DIR/health-check.sh $APP_DIR/ 2>/dev/null || true
 chmod +x $APP_DIR/health-check.sh 2>/dev/null || true
 
+# Handle update script self-update carefully
+if [[ -f "$TEMP_DIR/update.sh" ]]; then
+    # Check if the new update script is different
+    if ! cmp -s "$TEMP_DIR/update.sh" "$APP_DIR/update.sh" 2>/dev/null; then
+        echo "  - New update script detected, will update after completion..."
+        # Copy to a temporary location for post-update replacement
+        cp "$TEMP_DIR/update.sh" "$APP_DIR/update.sh.new" 2>/dev/null || true
+        chmod +x "$APP_DIR/update.sh.new" 2>/dev/null || true
+    fi
+fi
+
 echo "✓ Application files updated"
 
 # Update system packages
@@ -229,6 +240,15 @@ echo "  sudo cp -r $BACKUP_DIR/* $APP_DIR/"
 echo "  sudo systemctl start $SERVICE_NAME"
 echo ""
 echo "Update completed successfully!"
+
+# Handle update script self-replacement if needed
+if [[ -f "$APP_DIR/update.sh.new" ]]; then
+    echo ""
+    echo "Updating update script for next time..."
+    mv "$APP_DIR/update.sh.new" "$APP_DIR/update.sh" 2>/dev/null || true
+    chmod +x "$APP_DIR/update.sh" 2>/dev/null || true
+    echo "✓ Update script updated for future updates"
+fi
 
 # Clean up status file
 rm -f "$STATUS_FILE" 2>/dev/null || true
