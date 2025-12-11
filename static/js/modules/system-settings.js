@@ -134,13 +134,17 @@ class SystemSettingsManager {
                 body: JSON.stringify(config)
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
             const data = await response.json();
 
-            if (response.ok && data.success) {
+            if (data.success) {
                 showAlert('Hotspot configuration updated successfully', 'success');
                 setTimeout(() => this.refreshSystemStatus(), 2000);
             } else {
-                showAlert('Failed to update hotspot configuration: ' + (data.message || data.error || 'Unknown error'), 'danger');
+                showAlert('Failed to update hotspot configuration: ' + (data.message || 'Unknown error'), 'danger');
             }
         } catch (error) {
             console.error('Error updating hotspot config:', error);
